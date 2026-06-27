@@ -27,9 +27,7 @@ export function ReviewHistory({ history }: Props): React.ReactElement {
   if (history.length === 0) return <></>
   return (
     <section className="px-5 py-4">
-      <h3 className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink/40 mb-3">
-        Review history
-      </h3>
+      <h3 className="text-[11px] font-semibold text-ink/45 mb-3">Review history</h3>
       <ol className="relative space-y-3">
         {history.map((entry, i) => (
           <li key={i} className="relative pl-5">

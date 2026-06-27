@@ -57,9 +57,7 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
           </div>
         ) : (
           <div className="mb-5">
-            <h2 className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink/40 mb-2">
-              Recent vaults
-            </h2>
+            <h2 className="text-[11px] font-semibold text-ink/45 mb-2">Recent vaults</h2>
             <ul className="bg-white border border-line rounded-xl shadow-panel overflow-hidden">
               {vaults.map((v) => (
                 <li key={v.path} className="border-b border-line last:border-b-0">

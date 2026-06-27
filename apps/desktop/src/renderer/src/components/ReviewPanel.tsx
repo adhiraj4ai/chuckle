@@ -50,9 +50,7 @@ export function ReviewPanel({
   return (
     <aside className="w-80 min-w-80 border-l border-line bg-white flex flex-col h-full overflow-y-auto">
       <div className="px-5 py-4 border-b border-line">
-        <h2 className="text-[10.5px] font-semibold tracking-[0.09em] uppercase text-ink/40 mb-3">
-          Review
-        </h2>
+        <h2 className="text-[11px] font-semibold text-ink/45 mb-3">Review</h2>
         {record === undefined ? (
           <p className="text-[12px] text-ink/40">Loading…</p>
         ) : (

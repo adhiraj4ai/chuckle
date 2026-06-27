@@ -91,6 +91,16 @@ const CopyIcon = (): React.ReactElement => (
     <path d="M3 11V3.2c0-.6.5-1.2 1.2-1.2H10" strokeLinecap="round" />
   </svg>
 )
+const WidthIcon = ({ full }: { full: boolean }): React.ReactElement =>
+  full ? (
+    <svg viewBox="0 0 16 16" className={icon} fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M7 3L4 8l3 5M9 3l3 5-3 5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 16 16" className={icon} fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M5.5 3L2.5 8l3 5M10.5 3l3 5-3 5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
 
 export function DocumentPane({
   vaultPath,
@@ -104,6 +114,7 @@ export function DocumentPane({
   const [draft, setDraft] = useState('')
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [fullWidth, setFullWidth] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -230,6 +241,10 @@ export function DocumentPane({
               </>
             )}
             {formatBtn(copied ? 'Copied!' : 'Copy markdown', <CopyIcon />, copy)}
+            {view === 'read' &&
+              formatBtn(fullWidth ? 'Center content' : 'Full width', <WidthIcon full={fullWidth} />, () =>
+                setFullWidth((v) => !v)
+              )}
             <span className="w-px h-5 bg-line mx-1" />
             <div className="flex items-center gap-0.5 bg-mist rounded-lg p-0.5">
               {viewBtn('read', 'Read', ReadIcon)}
@@ -261,7 +276,9 @@ export function DocumentPane({
 
       {view === 'read' && (
         <div className="flex-1 overflow-y-auto">
-          <article className="doc max-w-[760px] mx-auto w-full px-8 py-8">
+          <article
+            className={`doc mx-auto w-full px-8 py-8 ${fullWidth ? 'max-w-none' : 'max-w-[760px]'}`}
+          >
             <Markdown content={content} />
           </article>
         </div>
