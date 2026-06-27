@@ -6,7 +6,6 @@ import {
   VaultManager,
   readApproval,
   writeApproval,
-  appendHistory,
   stageAndCommit,
   pushToRemote,
   pullLatest,
@@ -227,56 +226,6 @@ export async function writeDocument(
   await fs.writeFile(abs, content)
   // Content lives in the project repo, not the vault — nothing to push here.
   return { pushed: false, reason: 'document saved to the project; not part of the vault repo' }
-}
-
-export async function approveDocument(
-  vaultPath: string,
-  feature: string,
-  type: DocumentType,
-  message: string | null
-): Promise<ReviewResult> {
-  const record = await readApproval(vaultPath, feature, type)
-  if (!record) throw new Error(`no approval record for ${feature}/${type}`)
-  const { name, email } = await resolveVaultAuthor(vaultPath)
-  // Compute content hash so staleness can be detected later
-  const abs = resolveDocPath(vaultPath, await readManifest(vaultPath), feature, type)
-  let content_hash: string | undefined
-  try { content_hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { content_hash = undefined }
-  const updated = appendHistory(record, {
-    action: 'approved',
-    by: email,
-    at: new Date().toISOString(),
-    message,
-    content_hash,
-  })
-  await writeApproval(vaultPath, updated)
-  await stageAndCommit(vaultPath, [approvalRelPath(feature, type)], `review: approve ${feature}/${type}`, email, name)
-  return trySync(vaultPath)
-}
-
-export async function rejectDocument(
-  vaultPath: string,
-  feature: string,
-  type: DocumentType,
-  message: string
-): Promise<ReviewResult> {
-  const record = await readApproval(vaultPath, feature, type)
-  if (!record) throw new Error(`no approval record for ${feature}/${type}`)
-  const { name, email } = await resolveVaultAuthor(vaultPath)
-  // Compute content hash so staleness can be detected later
-  const abs = resolveDocPath(vaultPath, await readManifest(vaultPath), feature, type)
-  let content_hash: string | undefined
-  try { content_hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { content_hash = undefined }
-  const updated = appendHistory(record, {
-    action: 'requested_changes',
-    by: email,
-    at: new Date().toISOString(),
-    message,
-    content_hash,
-  })
-  await writeApproval(vaultPath, updated)
-  await stageAndCommit(vaultPath, [approvalRelPath(feature, type)], `review: reject ${feature}/${type}`, email, name)
-  return trySync(vaultPath)
 }
 
 export async function reviewAction(
