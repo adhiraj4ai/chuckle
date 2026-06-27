@@ -41,7 +41,7 @@ export interface VaultWorkflows {
 
 export interface VaultConfig {
   name: string;
-  org: string;
+  org?: string;         // optional, legacy; not used by the docs-as-vault flow
   created_at: string;   // ISO 8601 UTC
 }
 

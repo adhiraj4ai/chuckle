@@ -5,7 +5,7 @@ const api: ChuckleAPI = {
   vault: {
     list: () => ipcRenderer.invoke('vault:list'),
     remove: (vaultPath) => ipcRenderer.invoke('vault:remove', { vaultPath }),
-    create: (path, name, org) => ipcRenderer.invoke('vault:create', { path, name, org }),
+    create: (path, name) => ipcRenderer.invoke('vault:create', { path, name }),
     openExisting: (path) => ipcRenderer.invoke('vault:open-existing', { path }),
     selectDirectory: () => ipcRenderer.invoke('vault:select-directory'),
     sync: (vaultPath) => ipcRenderer.invoke('vault:sync', { vaultPath }),

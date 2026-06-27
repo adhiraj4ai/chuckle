@@ -55,7 +55,7 @@ describe('createVault', () => {
   it('creates .signoff in the project root, gitignores it, and registers it', async () => {
     const projectRoot = path.join(tmpDir, 'my-project')
     await fs.mkdir(projectRoot, { recursive: true })
-    const result = await createVault(projectRoot, 'my-project', 'my-org')
+    const result = await createVault(projectRoot, 'my-project')
 
     const vaultDir = path.join(projectRoot, '.signoff')
     expect(result.name).toBe('my-project')
@@ -201,7 +201,7 @@ describe('createVault doc auto-detection', () => {
     await fs.writeFile(path.join(projectRoot, 'docs', 'plans', '2026-06-27-user-auth.md'), '# Auth plan\n')
     await fs.writeFile(path.join(projectRoot, '.superpowers', 'specs', '2026-06-27-billing-design.md'), '# Billing\n')
 
-    const result = await createVault(projectRoot, 'proj', 'org')
+    const result = await createVault(projectRoot, 'proj')
 
     const features = await listFeatures(result.path)
     const names = features.map((f) => f.name).sort()

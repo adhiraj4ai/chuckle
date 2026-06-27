@@ -68,7 +68,7 @@ export interface ChuckleAPI {
   vault: {
     list(): Promise<VaultInfo[]>
     remove(vaultPath: string): Promise<void>
-    create(projectRoot: string, name: string, org: string): Promise<VaultOpenResult>
+    create(projectRoot: string, name: string): Promise<VaultOpenResult>
     openExisting(path: string): Promise<VaultOpenResult>
     selectDirectory(): Promise<string | null>
     sync(vaultPath: string): Promise<void>

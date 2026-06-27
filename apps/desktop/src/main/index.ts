@@ -42,7 +42,7 @@ function createWindow(): void {
 function registerIpcHandlers(): void {
   ipcMain.handle('vault:list', () => listVaults())
   ipcMain.handle('vault:remove', (_e, { vaultPath }) => removeVault(vaultPath))
-  ipcMain.handle('vault:create', (_e, { path, name, org }) => createVault(path, name, org))
+  ipcMain.handle('vault:create', (_e, { path, name }) => createVault(path, name))
   ipcMain.handle('vault:open-existing', (_e, { path }) => openExistingVault(path))
   ipcMain.handle('vault:select-directory', async () => {
     const result = await dialog.showOpenDialog({ properties: ['openDirectory'] })

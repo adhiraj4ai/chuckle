@@ -48,15 +48,15 @@ export class VaultManager {
     return this._config;
   }
 
-  static async create(vaultPath: string, name: string, org: string): Promise<VaultManager> {
+  static async create(vaultPath: string, name: string, org?: string): Promise<VaultManager> {
     await fs.mkdir(path.join(vaultPath, "specs"), { recursive: true });
     await fs.mkdir(path.join(vaultPath, "plans"), { recursive: true });
     await fs.mkdir(path.join(vaultPath, "approvals"), { recursive: true });
 
     const config: VaultConfig = {
       name,
-      org,
       created_at: new Date().toISOString(),
+      ...(org ? { org } : {}),
     };
 
     // config + workflows live at the vault root (the vault dir is the project's

@@ -131,13 +131,9 @@ async function importProjectDocs(projectRoot: string, vaultDir: string): Promise
   return count
 }
 
-export async function createVault(
-  projectRoot: string,
-  name: string,
-  org: string
-): Promise<VaultOpenResult> {
+export async function createVault(projectRoot: string, name: string): Promise<VaultOpenResult> {
   const vaultDir = path.join(projectRoot, VAULT_DIR)
-  const manager = await VaultManager.create(vaultDir, name, org)
+  const manager = await VaultManager.create(vaultDir, name)
   await ensureGitignored(projectRoot)
   // Detect and ingest the project's existing docs so the vault isn't empty.
   // Best-effort: a doc-import failure must not abort setup.

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { VaultSwitcher } from '@renderer/components/VaultSwitcher'
 import type { VaultInfo } from '@shared/ipc-types'
 
@@ -48,27 +47,21 @@ describe('VaultSwitcher', () => {
     await waitFor(() => screen.getByText(/no projects/i))
   })
 
-  it('opens directory dialog and sets up a vault on "Set up in a project"', async () => {
+  it('picks a folder and sets up a vault named after it on "Set up in a project"', async () => {
     vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
     vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/new/path')
     vi.mocked(window.chuckle.vault.create).mockResolvedValue({
-      name: 'new-vault',
-      path: '/new/path/.chuckle',
+      name: 'path',
+      path: '/new/path/.signoff',
     })
-    vi.mocked(window.chuckle.vault.list).mockResolvedValueOnce([]).mockResolvedValue([
-      { name: 'new-vault', path: '/new/path', last_opened: '2026-06-27T00:00:00Z' },
-    ])
     const onSelected = vi.fn()
     render(<VaultSwitcher onVaultSelected={onSelected} />)
     await waitFor(() => screen.getByText(/set up in a project/i))
     fireEvent.click(screen.getByText(/set up in a project/i))
-    // Should prompt for project name
-    await waitFor(() => screen.getByPlaceholderText(/project name/i))
-    await userEvent.type(screen.getByPlaceholderText(/project name/i), 'new-vault')
-    await userEvent.type(screen.getByPlaceholderText(/org/i), 'test-org')
-    fireEvent.click(screen.getByRole('button', { name: /create/i }))
+    // No modal — the folder is picked and the name defaults to its basename.
     await waitFor(() => expect(window.chuckle.vault.selectDirectory).toHaveBeenCalled())
-    await waitFor(() => expect(window.chuckle.vault.create).toHaveBeenCalledWith('/new/path', 'new-vault', 'test-org'))
+    await waitFor(() => expect(window.chuckle.vault.create).toHaveBeenCalledWith('/new/path', 'path'))
+    await waitFor(() => expect(onSelected).toHaveBeenCalledWith('/new/path/.signoff', 'path'))
   })
 
   it('opens existing vault on "Open"', async () => {
