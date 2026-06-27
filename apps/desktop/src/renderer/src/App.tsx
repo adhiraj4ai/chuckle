@@ -8,7 +8,6 @@ import { FeatureTabs } from './components/FeatureTabs'
 import { GitPanel } from './components/GitPanel'
 import { useVault } from './hooks/useVault'
 import { useAutoSync } from './hooks/useAutoSync'
-import { humanizeFeature } from './lib/feature'
 import type { ApprovalRecord, DocumentType, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
 
 const DOC_TYPES: DocumentType[] = ['spec', 'plan']
@@ -169,14 +168,7 @@ export function App(): React.ReactElement {
           onSwitchVault={closeVault}
         />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {active && (
-            <FeatureTabs
-              featureLabel={humanizeFeature(active.feature)}
-              types={activeTypes}
-              active={active.type}
-              onSelect={selectType}
-            />
-          )}
+          {active && <FeatureTabs types={activeTypes} active={active.type} onSelect={selectType} />}
           {!active ? (
             <div className="flex-1 grid place-items-center px-8">
               <div className="text-center max-w-sm">

@@ -4,7 +4,6 @@ import type { ApprovalStatus, DocumentType } from '@shared/ipc-types'
 type Status = ApprovalStatus | 'not_found'
 
 interface Props {
-  featureLabel: string
   types: { type: DocumentType; status: Status }[]
   active: DocumentType
   onSelect: (type: DocumentType) => void
@@ -18,12 +17,9 @@ function dot(status: Status): string {
 }
 
 /** Spec / Plan tabs for the one feature currently open. */
-export function FeatureTabs({ featureLabel, types, active, onSelect }: Props): React.ReactElement {
+export function FeatureTabs({ types, active, onSelect }: Props): React.ReactElement {
   return (
-    <div className="flex items-center gap-3 h-11 px-4 bg-app border-b border-border shrink-0">
-      <span className="text-[13px] font-semibold text-fg truncate max-w-[45%]" title={featureLabel}>
-        {featureLabel}
-      </span>
+    <div className="flex items-center h-11 px-3 bg-app border-b border-border shrink-0">
       <div className="flex items-center gap-1">
         {types.map((t) => {
           const isActive = t.type === active
