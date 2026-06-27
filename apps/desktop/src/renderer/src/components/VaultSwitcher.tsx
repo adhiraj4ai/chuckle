@@ -52,12 +52,12 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
         {vaults.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-surface/60 px-5 py-8 text-center mb-5">
             <p className="text-[13.5px] text-fg/55">
-              No vaults yet. Start a new one, or open an existing vault repo.
+              No projects yet. Set Chuckle up in a project, or open an existing vault.
             </p>
           </div>
         ) : (
           <div className="mb-5">
-            <h2 className="text-[11px] font-semibold text-fg/45 mb-2">Recent vaults</h2>
+            <h2 className="text-[11px] font-semibold text-fg/45 mb-2">Recent projects</h2>
             <ul className="bg-surface border border-border rounded-xl shadow-panel overflow-hidden">
               {vaults.map((v) => (
                 <li key={v.path} className="border-b border-border last:border-b-0">
@@ -84,13 +84,13 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
             onClick={() => setModal('new-vault')}
             className="flex-1 px-4 py-2.5 rounded-lg bg-iris text-white text-[13px] font-semibold hover:bg-iris-ink active:brightness-95 transition"
           >
-            New Vault
+            Set up in a project
           </button>
           <button
             onClick={handleOpenVault}
             className="flex-1 px-4 py-2.5 rounded-lg border border-border bg-surface text-fg/80 text-[13px] font-medium hover:bg-app transition"
           >
-            Open Vault
+            Open
           </button>
         </div>
       </div>
@@ -104,14 +104,16 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
             className="bg-surface rounded-2xl p-6 w-[22rem] shadow-panel"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="font-semibold text-[17px] text-fg mb-1">New vault</h2>
+            <h2 className="font-semibold text-[17px] text-fg mb-1">Set up Chuckle in a project</h2>
             <p className="text-[12.5px] text-fg/50 mb-5">
-              You&apos;ll pick a folder next — Chuckle initializes a git repo there.
+              You&apos;ll pick your project folder next. Chuckle creates a{' '}
+              <span className="font-mono text-fg/70">.chuckle/</span> vault inside it (its own git
+              repo) and keeps it out of the project&apos;s own git.
             </p>
-            <label className="block text-[12px] font-medium text-fg/60 mb-1">Vault name</label>
+            <label className="block text-[12px] font-medium text-fg/60 mb-1">Project name</label>
             <input
               className="w-full rounded-lg border border-border px-3 py-2 mb-3.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30 focus:border-iris/50"
-              placeholder="Vault name"
+              placeholder="Project name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               autoFocus

@@ -31,13 +31,13 @@ describe('VaultSwitcher', () => {
     expect(onSelected).toHaveBeenCalledWith('/vaults/alpha', 'project-alpha')
   })
 
-  it('shows empty state when no vaults registered', async () => {
+  it('shows empty state when no projects registered', async () => {
     vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
     render(<VaultSwitcher onVaultSelected={() => {}} />)
-    await waitFor(() => screen.getByText(/no vaults/i))
+    await waitFor(() => screen.getByText(/no projects/i))
   })
 
-  it('opens directory dialog and creates vault on "New Vault"', async () => {
+  it('opens directory dialog and sets up a vault on "Set up in a project"', async () => {
     vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
     vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/new/path')
     vi.mocked(window.chuckle.vault.create).mockResolvedValue({
@@ -49,18 +49,18 @@ describe('VaultSwitcher', () => {
     ])
     const onSelected = vi.fn()
     render(<VaultSwitcher onVaultSelected={onSelected} />)
-    await waitFor(() => screen.getByText(/new vault/i))
-    fireEvent.click(screen.getByText(/new vault/i))
-    // Should prompt for vault name
-    await waitFor(() => screen.getByPlaceholderText(/vault name/i))
-    await userEvent.type(screen.getByPlaceholderText(/vault name/i), 'new-vault')
+    await waitFor(() => screen.getByText(/set up in a project/i))
+    fireEvent.click(screen.getByText(/set up in a project/i))
+    // Should prompt for project name
+    await waitFor(() => screen.getByPlaceholderText(/project name/i))
+    await userEvent.type(screen.getByPlaceholderText(/project name/i), 'new-vault')
     await userEvent.type(screen.getByPlaceholderText(/org/i), 'test-org')
-    fireEvent.click(screen.getByText(/create/i))
+    fireEvent.click(screen.getByRole('button', { name: /create/i }))
     await waitFor(() => expect(window.chuckle.vault.selectDirectory).toHaveBeenCalled())
     await waitFor(() => expect(window.chuckle.vault.create).toHaveBeenCalledWith('/new/path', 'new-vault', 'test-org'))
   })
 
-  it('opens existing vault on "Open Vault"', async () => {
+  it('opens existing vault on "Open"', async () => {
     vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
     vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/existing/vault')
     vi.mocked(window.chuckle.vault.openExisting).mockResolvedValue({
@@ -69,8 +69,8 @@ describe('VaultSwitcher', () => {
     })
     const onSelected = vi.fn()
     render(<VaultSwitcher onVaultSelected={onSelected} />)
-    await waitFor(() => screen.getByText(/open vault/i))
-    fireEvent.click(screen.getByText(/open vault/i))
+    await waitFor(() => screen.getByRole('button', { name: 'Open' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
     await waitFor(() => expect(window.chuckle.vault.selectDirectory).toHaveBeenCalled())
     await waitFor(() => expect(window.chuckle.vault.openExisting).toHaveBeenCalledWith('/existing/vault'))
     expect(onSelected).toHaveBeenCalledWith('/existing/vault', 'existing')
