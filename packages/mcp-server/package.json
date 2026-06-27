@@ -1,0 +1,31 @@
+{
+  "name": "@chuckle/mcp-server",
+  "version": "0.1.0",
+  "description": "Chuckle MCP server — publish and gate documents in Claude Code",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "chuckle-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@chuckle/vault-core": "*",
+    "@modelcontextprotocol/sdk": "^1.12.3",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
