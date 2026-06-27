@@ -10,8 +10,12 @@ import {
   readDocument,
   writeDocument,
   getDocumentApproval,
-  approveDocument,
-  rejectDocument,
+  reviewAction,
+  readDocComments,
+  addCommentThread,
+  addCommentReply,
+  setCommentResolved,
+  readProjectClaudeMd,
   readVaultWorkflows,
   writeVaultWorkflows,
   isDocumentStale,
@@ -64,8 +68,12 @@ function registerIpcHandlers(): void {
     writeDocument(vaultPath, feature, type, content)
   )
   ipcMain.handle('document:get-approval', (_e, { vaultPath, feature, type }) => getDocumentApproval(vaultPath, feature, type))
-  ipcMain.handle('document:approve', (_e, { vaultPath, feature, type, message }) => approveDocument(vaultPath, feature, type, message))
-  ipcMain.handle('document:reject', (_e, { vaultPath, feature, type, message }) => rejectDocument(vaultPath, feature, type, message))
+  ipcMain.handle('review:action', (_e, { vaultPath, feature, type, action }) => reviewAction(vaultPath, feature, type, action))
+  ipcMain.handle('comments:read', (_e, { vaultPath, feature, type }) => readDocComments(vaultPath, feature, type))
+  ipcMain.handle('comments:add-thread', (_e, { vaultPath, feature, type, section, line, body }) => addCommentThread(vaultPath, feature, type, section, line, body))
+  ipcMain.handle('comments:add-reply', (_e, { vaultPath, feature, type, threadId, body }) => addCommentReply(vaultPath, feature, type, threadId, body))
+  ipcMain.handle('comments:set-resolved', (_e, { vaultPath, feature, type, threadId, resolved }) => setCommentResolved(vaultPath, feature, type, threadId, resolved))
+  ipcMain.handle('project:read-claude-md', (_e, { vaultPath }) => readProjectClaudeMd(vaultPath))
   ipcMain.handle('workflows:read', (_e, { vaultPath }) => readVaultWorkflows(vaultPath))
   ipcMain.handle('workflows:write', (_e, { vaultPath, workflows }) => writeVaultWorkflows(vaultPath, workflows))
   ipcMain.handle('document:is-stale', (_e, { vaultPath, feature, type }) => isDocumentStale(vaultPath, feature, type))

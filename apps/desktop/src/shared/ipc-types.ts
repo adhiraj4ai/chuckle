@@ -7,6 +7,8 @@ import type {
   WorkflowConfig,
   ApprovalStatus,
   DocumentType,
+  ReviewAction,
+  CommentsFile,
 } from '@chuckle/vault-core'
 
 export type {
@@ -18,6 +20,8 @@ export type {
   WorkflowConfig,
   ApprovalStatus,
   DocumentType,
+  ReviewAction,
+  CommentsFile,
 }
 
 export interface FeatureEntry {
@@ -60,7 +64,10 @@ export type IpcChannels =
   | 'vault:list' | 'vault:remove' | 'vault:create' | 'vault:open-existing' | 'vault:select-directory' | 'vault:sync' | 'vault:get-remote'
   | 'vault:log' | 'vault:status' | 'vault:push' | 'vault:publish-branch' | 'vault:author'
   | 'features:list'
-  | 'document:read' | 'document:write' | 'document:get-approval' | 'document:approve' | 'document:reject' | 'document:is-stale'
+  | 'document:read' | 'document:write' | 'document:get-approval' | 'document:is-stale'
+  | 'review:action'
+  | 'comments:read' | 'comments:add-thread' | 'comments:add-reply' | 'comments:set-resolved'
+  | 'project:read-claude-md'
   | 'workflows:read' | 'workflows:write'
   | 'app:open-external'
 
@@ -86,9 +93,19 @@ export interface ChuckleAPI {
     read(vaultPath: string, feature: string, type: DocumentType): Promise<string>
     write(vaultPath: string, feature: string, type: DocumentType, content: string): Promise<ReviewResult>
     getApproval(vaultPath: string, feature: string, type: DocumentType): Promise<ApprovalRecord | null>
-    approve(vaultPath: string, feature: string, type: DocumentType, message: string | null): Promise<ReviewResult>
-    reject(vaultPath: string, feature: string, type: DocumentType, message: string): Promise<ReviewResult>
     isStale(vaultPath: string, feature: string, type: DocumentType): Promise<boolean>
+  }
+  review: {
+    action(vaultPath: string, feature: string, type: DocumentType, action: ReviewAction): Promise<ReviewResult>
+  }
+  comments: {
+    read(vaultPath: string, feature: string, type: DocumentType): Promise<CommentsFile>
+    addThread(vaultPath: string, feature: string, type: DocumentType, section: string, line: number, body: string): Promise<CommentsFile>
+    addReply(vaultPath: string, feature: string, type: DocumentType, threadId: string, body: string): Promise<CommentsFile>
+    setResolved(vaultPath: string, feature: string, type: DocumentType, threadId: string, resolved: boolean): Promise<CommentsFile>
+  }
+  project: {
+    readClaudeMd(vaultPath: string): Promise<string | null>
   }
   workflows: {
     read(vaultPath: string): Promise<VaultWorkflows>

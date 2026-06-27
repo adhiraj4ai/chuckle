@@ -13,6 +13,12 @@ import {
   getDocumentApproval,
   approveDocument,
   rejectDocument,
+  reviewAction,
+  readDocComments,
+  addCommentThread,
+  addCommentReply,
+  setCommentResolved,
+  readProjectClaudeMd,
   publishBranch,
   getVaultStatus,
   writeVaultWorkflows,
@@ -176,9 +182,10 @@ describe('rejectDocument', () => {
     await seedDoc('user-auth', 'spec')
     await rejectDocument(vaultPath, 'user-auth', 'spec', 'Needs more detail')
     const record = await getDocumentApproval(vaultPath, 'user-auth', 'spec')
+    // vault-core renamed action 'rejected' -> 'requested_changes'; status still derives to 'rejected'
     expect(record!.status).toBe('rejected')
     const lastEntry = record!.history.at(-1)!
-    expect(lastEntry.action).toBe('rejected')
+    expect(lastEntry.action).toBe('requested_changes')
     expect(lastEntry.message).toBe('Needs more detail')
   })
 
@@ -280,5 +287,43 @@ describe('isDocumentStale', () => {
     await seedDoc('user-auth', 'spec', '# v1\n')
     // Not approved yet — isDocumentStale should return false
     expect(await isDocumentStale(vaultPath, 'user-auth', 'spec')).toBe(false)
+  })
+})
+
+describe('reviewAction', () => {
+  it('reviewAction walks start_review -> approve and derives approved (single self-approver)', async () => {
+    await seedDoc('user-auth', 'spec', '# v1\n')
+    await reviewAction(vaultPath, 'user-auth', 'spec', 'start_review')
+    await reviewAction(vaultPath, 'user-auth', 'spec', 'approve')
+    const rec = await getDocumentApproval(vaultPath, 'user-auth', 'spec')
+    const email = Object.keys(rec!.reviewers)[0]
+    expect(rec!.reviewers[email].status).toBe('approved')
+  })
+
+  it('reviewAction approve before start_review throws', async () => {
+    await seedDoc('user-auth', 'spec')
+    await expect(reviewAction(vaultPath, 'user-auth', 'spec', 'approve')).rejects.toThrow()
+  })
+})
+
+describe('comments', () => {
+  it('add thread, reply, resolve round-trip', async () => {
+    await seedDoc('user-auth', 'spec')
+    let file = await addCommentThread(vaultPath, 'user-auth', 'spec', 'goals', 12, 'Why this scope?')
+    const threadId = file.threads[0].id
+    file = await addCommentReply(vaultPath, 'user-auth', 'spec', threadId, 'Because X')
+    expect(file.threads[0].comments).toHaveLength(2)
+    file = await setCommentResolved(vaultPath, 'user-auth', 'spec', threadId, true)
+    expect(file.threads[0].resolved).toBe(true)
+    expect((await readDocComments(vaultPath, 'user-auth', 'spec')).threads[0].resolved).toBe(true)
+  })
+})
+
+describe('readProjectClaudeMd', () => {
+  it('returns content when present, null otherwise', async () => {
+    const projectRoot = path.dirname(vaultPath)
+    expect(await readProjectClaudeMd(vaultPath)).toBeNull()
+    await fs.writeFile(path.join(projectRoot, 'CLAUDE.md'), '# Project rules\n')
+    expect(await readProjectClaudeMd(vaultPath)).toContain('# Project rules')
   })
 })

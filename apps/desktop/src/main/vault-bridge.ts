@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { simpleGit } from 'simple-git'
 import {
   VaultManager,
@@ -10,6 +11,7 @@ import {
   pushToRemote,
   pullLatest,
   readWorkflows,
+  getWorkflowForType,
   getApprovalStatus,
   listFeatureNames,
   inferFeatureName,
@@ -19,10 +21,21 @@ import {
   hashContent,
   isStale,
   migrateToIndex,
+  applyReviewerAction,
+  deriveStatus,
+  projectRootOf,
+  readComments,
+  writeComments,
+  addThread,
+  addReply,
+  setResolved,
+  commentsRelPath,
   type VaultInfo,
   type VaultWorkflows,
   type ApprovalRecord,
   type DocumentType,
+  type ReviewAction,
+  type CommentsFile,
 } from '@chuckle/vault-core'
 import type { FeatureEntry, GitCommit, GitStatus, ReviewResult, VaultOpenResult } from '../shared/ipc-types.js'
 
@@ -255,7 +268,7 @@ export async function rejectDocument(
   let content_hash: string | undefined
   try { content_hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { content_hash = undefined }
   const updated = appendHistory(record, {
-    action: 'rejected',
+    action: 'requested_changes',
     by: email,
     at: new Date().toISOString(),
     message,
@@ -264,6 +277,72 @@ export async function rejectDocument(
   await writeApproval(vaultPath, updated)
   await stageAndCommit(vaultPath, [approvalRelPath(feature, type)], `review: reject ${feature}/${type}`, email, name)
   return trySync(vaultPath)
+}
+
+export async function reviewAction(
+  vaultPath: string, feature: string, type: DocumentType, action: ReviewAction
+): Promise<ReviewResult> {
+  const record = await readApproval(vaultPath, feature, type)
+  if (!record) throw new Error(`no approval record for ${feature}/${type}`)
+  const { name, email } = await resolveVaultAuthor(vaultPath)
+  // enforcement: when a required list exists, only its members may act
+  let required: string[] = []
+  try { required = getWorkflowForType(await readWorkflows(vaultPath), type).required_approvers } catch { required = [] }
+  if (required.length && !required.includes(email)) {
+    throw new Error(`only ${required.join(', ')} may review ${feature}/${type}`)
+  }
+  const abs = resolveDocPath(vaultPath, await readManifest(vaultPath), feature, type)
+  let hash: string | undefined
+  try { hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { hash = undefined }
+  const now = new Date().toISOString()
+  let updated = applyReviewerAction(record, email, action, now, hash)
+  updated = { ...updated, status: deriveStatus(updated, required, hash ?? null) }
+  await writeApproval(vaultPath, updated)
+  await stageAndCommit(vaultPath, [approvalRelPath(feature, type)], `review: ${action} ${feature}/${type} by ${email}`, email, name)
+  return trySync(vaultPath)
+}
+
+export async function readDocComments(vaultPath: string, feature: string, type: DocumentType): Promise<CommentsFile> {
+  return readComments(vaultPath, feature, type)
+}
+
+async function commitComments(vaultPath: string, feature: string, type: DocumentType, file: CommentsFile, msg: string): Promise<CommentsFile> {
+  await writeComments(vaultPath, feature, type, file)
+  const { name, email } = await resolveVaultAuthor(vaultPath)
+  await stageAndCommit(vaultPath, [commentsRelPath(feature, type)], msg, email, name)
+  await trySync(vaultPath)
+  return file
+}
+
+export async function addCommentThread(vaultPath: string, feature: string, type: DocumentType, section: string, line: number, body: string): Promise<CommentsFile> {
+  const { email } = await resolveVaultAuthor(vaultPath)
+  const now = new Date().toISOString()
+  const file = addThread(await readComments(vaultPath, feature, type), {
+    id: randomUUID(), section, line, resolved: false,
+    comments: [{ id: randomUUID(), by: email, at: now, body }],
+  })
+  return commitComments(vaultPath, feature, type, file, `comment: add thread on ${feature}/${type}`)
+}
+
+export async function addCommentReply(vaultPath: string, feature: string, type: DocumentType, threadId: string, body: string): Promise<CommentsFile> {
+  const { email } = await resolveVaultAuthor(vaultPath)
+  const now = new Date().toISOString()
+  const file = addReply(await readComments(vaultPath, feature, type), threadId, { id: randomUUID(), by: email, at: now, body })
+  return commitComments(vaultPath, feature, type, file, `comment: reply on ${feature}/${type}`)
+}
+
+export async function setCommentResolved(vaultPath: string, feature: string, type: DocumentType, threadId: string, resolved: boolean): Promise<CommentsFile> {
+  const file = setResolved(await readComments(vaultPath, feature, type), threadId, resolved)
+  return commitComments(vaultPath, feature, type, file, `comment: ${resolved ? 'resolve' : 'reopen'} thread on ${feature}/${type}`)
+}
+
+export async function readProjectClaudeMd(vaultPath: string): Promise<string | null> {
+  try {
+    return await fs.readFile(path.join(projectRootOf(vaultPath), 'CLAUDE.md'), 'utf-8')
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw err
+  }
 }
 
 export async function readVaultWorkflows(vaultPath: string): Promise<VaultWorkflows> {
