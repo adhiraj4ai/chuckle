@@ -46,15 +46,16 @@ export function deriveStatus(
   requiredApprovers: string[],
   currentHash: string | null
 ): ApprovalStatus {
-  const entries = Object.entries(record.reviewers);
+  const reviewers = record.reviewers ?? {};
+  const entries = Object.entries(reviewers);
   const approvedFresh = (s: { status: ReviewerStatus; content_hash?: string }) =>
     s.status === "approved" && (!currentHash || s.content_hash === currentHash);
 
   // changes requested by any required reviewer wins
-  if (requiredApprovers.some((e) => record.reviewers[e]?.status === "changes_requested")) return "rejected";
+  if (requiredApprovers.some((e) => reviewers[e]?.status === "changes_requested")) return "rejected";
 
   if (requiredApprovers.length > 0) {
-    if (requiredApprovers.every((e) => record.reviewers[e] && approvedFresh(record.reviewers[e]))) return "approved";
+    if (requiredApprovers.every((e) => reviewers[e] && approvedFresh(reviewers[e]))) return "approved";
   } else if (entries.some(([, s]) => approvedFresh(s))) {
     return "approved";
   }

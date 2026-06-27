@@ -67,4 +67,8 @@ describe("deriveStatus", () => {
   it("no reviewers acted -> pending", () => {
     expect(deriveStatus(base(), ["a@o.c"], "h")).toBe("pending");
   });
+  it("derives pending for a legacy record with no reviewers map", () => {
+    const legacy = { document: "d", feature: "f", type: "spec", workflow: "spec", status: "pending", history: [] } as unknown as ApprovalRecord;
+    expect(deriveStatus(legacy, ["a@o.c"], "h")).toBe("pending");
+  });
 });
