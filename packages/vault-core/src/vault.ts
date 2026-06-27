@@ -155,6 +155,7 @@ export class VaultManager {
           ...existing,
           document: srcRelPath,
           status: "pending",
+          reviewers: existing.reviewers ?? {},
           history: [
             ...existing.history,
             { action: "resubmitted", by: authorEmail, at: now, message: null, content_hash: contentHash },

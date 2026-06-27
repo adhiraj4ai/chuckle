@@ -7,6 +7,9 @@ import type {
   DocumentType,
   CheckApprovalResult,
 } from "./types.js";
+import { deriveStatus } from "./review.js";
+import { readWorkflows, getWorkflowForType } from "./workflow.js";
+import { readManifest, resolveDocPath, hashContent } from "./manifest.js";
 
 export function approvalFilePath(
   vaultPath: string,
@@ -68,18 +71,26 @@ export async function getApprovalStatus(
   const record = await readApproval(vaultPath, feature, type);
   if (!record) return { status: "not_found" };
 
-  if (record.status === "approved") {
-    const approvedEntry = [...record.history]
-      .reverse()
-      .find((e) => e.action === "approved");
-    return {
-      status: "approved",
-      approved_by: approvedEntry?.by,
-      approved_at: approvedEntry?.at,
-    };
+  let required: string[] = [];
+  try {
+    required = getWorkflowForType(await readWorkflows(vaultPath), type).required_approvers;
+  } catch {
+    required = [];
+  }
+  let currentHash: string | null = null;
+  try {
+    const abs = resolveDocPath(vaultPath, await readManifest(vaultPath), feature, type);
+    if (abs) currentHash = hashContent(await fs.readFile(abs));
+  } catch {
+    currentHash = null;
   }
 
-  return { status: record.status };
+  const status = deriveStatus(record, required, currentHash);
+  if (status === "approved") {
+    const approvedEntry = [...record.history].reverse().find((e) => e.action === "approved");
+    return { status, approved_by: approvedEntry?.by, approved_at: approvedEntry?.at };
+  }
+  return { status };
 }
 
 /**
