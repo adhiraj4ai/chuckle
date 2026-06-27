@@ -61,4 +61,16 @@ describe('ReviewPanel status display', () => {
     )
     expect(screen.getByText(/not submitted/i)).toBeInTheDocument()
   })
+
+  it('renders the review history from the record', () => {
+    const rec: ApprovalRecord = {
+      ...record({}),
+      history: [{ action: 'submitted', by: 'dev@o.c', at: '2026-06-27T10:00:00Z', message: null }],
+    }
+    render(
+      <ReviewPanel vaultPath="/v" feature="user-auth" type="spec" record={rec} workflow={workflow} onActionComplete={() => {}} />
+    )
+    expect(screen.getByText(/review history/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/submitted/i).length).toBeGreaterThan(0)
+  })
 })

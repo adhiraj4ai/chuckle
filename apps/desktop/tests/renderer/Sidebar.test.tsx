@@ -47,6 +47,25 @@ describe('Sidebar', () => {
     expect(screen.queryByText('Payment Gw')).not.toBeInTheDocument()
   })
 
+  it('surfaces in_review docs via the In review filter chip and tints them', () => {
+    const fs: FeatureEntry[] = [
+      { name: 'user-auth', spec: 'in_review', plan: 'not_found' },
+      { name: 'payment-gw', spec: 'approved', plan: 'not_found' },
+    ]
+    render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    // The In review chip exists with a count of 1
+    const chip = screen.getByText('In review')
+    expect(chip).toBeInTheDocument()
+    // The S badge for the in_review doc is NOT the neutral fallback — carries the wait/amber tint
+    const badge = screen.getByTitle('spec — In review')
+    expect(badge.className).toContain('text-wait')
+    expect(badge.className).not.toContain('text-railfg/40')
+    // Filtering by In review surfaces only user-auth
+    fireEvent.click(chip)
+    expect(screen.getByText('User Auth')).toBeInTheDocument()
+    expect(screen.queryByText('Payment Gw')).not.toBeInTheDocument()
+  })
+
   it('shows an empty state with a clear-filters action when nothing matches', () => {
     render(<Sidebar vaultName="vault" features={features} selected={null} onSelect={() => {}} onSync={() => {}} />)
     fireEvent.change(screen.getByRole('searchbox'), { target: { value: 'zzz' } })

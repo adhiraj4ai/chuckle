@@ -18,7 +18,8 @@ interface Props {
 }
 
 function statusLabel(status: Status): string {
-  if (status === 'pending') return 'In review'
+  if (status === 'pending') return 'Pending'
+  if (status === 'in_review') return 'In review'
   if (status === 'approved') return 'Approved'
   if (status === 'rejected') return 'Changes requested'
   return 'Open'
@@ -26,6 +27,7 @@ function statusLabel(status: Status): string {
 
 function statusIcon(status: Status): string {
   if (status === 'pending') return '⏳'
+  if (status === 'in_review') return '🔄'
   if (status === 'approved') return '✅'
   if (status === 'rejected') return '❌'
   return '○'
@@ -33,7 +35,8 @@ function statusIcon(status: Status): string {
 
 /** Solid dot color for a status (used in filter chips + group headers). */
 function statusDot(status: Status): string {
-  if (status === 'pending') return 'bg-wait'
+  if (status === 'pending') return 'bg-railfg/40'
+  if (status === 'in_review') return 'bg-wait'
   if (status === 'approved') return 'bg-ok'
   if (status === 'rejected') return 'bg-stop'
   return 'bg-railfg/30'
@@ -41,17 +44,19 @@ function statusDot(status: Status): string {
 
 /** Tinted badge classes for a per-document status pill on a feature row. */
 function statusTint(status: Status): string {
-  if (status === 'pending') return 'bg-wait/20 text-wait'
+  if (status === 'pending') return 'bg-railfg/10 text-railfg/55'
+  if (status === 'in_review') return 'bg-wait/20 text-wait'
   if (status === 'approved') return 'bg-ok/20 text-ok'
   if (status === 'rejected') return 'bg-stop/20 text-stop'
   return 'bg-railfg/10 text-railfg/40'
 }
 
-const STATUS_ORDER: ApprovalStatus[] = ['pending', 'rejected', 'approved', 'not_found']
+const STATUS_ORDER: ApprovalStatus[] = ['rejected', 'in_review', 'pending', 'approved', 'not_found']
 
 const FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'all', label: 'All' },
-  { key: 'pending', label: 'In review' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'in_review', label: 'In review' },
   { key: 'rejected', label: 'Changes' },
   { key: 'approved', label: 'Approved' },
 ]
@@ -67,6 +72,7 @@ function featureStatuses(f: FeatureEntry): ApprovalStatus[] {
 function primaryStatus(f: FeatureEntry): ApprovalStatus {
   const s = featureStatuses(f)
   if (s.includes('rejected')) return 'rejected'
+  if (s.includes('in_review')) return 'in_review'
   if (s.includes('pending')) return 'pending'
   if (s.includes('approved')) return 'approved'
   return 'not_found'
