@@ -72,4 +72,22 @@ describe("migrateToIndex", () => {
     const res = await migrateToIndex(vaultPath);
     expect(res.migrated).toBe(false);
   });
+
+  it("second call is a no-op when the only remaining copy is a fallback", async () => {
+    // First migration: orphan approval → fallback copy kept in .signoff/specs/orphan.md
+    await fs.writeFile(path.join(vaultPath, "specs", "orphan.md"), "# orphan\n");
+    await writeApproval(vaultPath, {
+      document: "spec.md", feature: "orphan", type: "spec", workflow: "spec",
+      status: "approved", history: [{ action: "approved", by: "d@o.c", at: "t", message: null }],
+    });
+    const first = await migrateToIndex(vaultPath);
+    expect(first.migrated).toBe(true);
+    expect(first.unresolved).toContain("orphan/spec");
+
+    // Second call: index.json now exists; the only copy in specs/ is the
+    // .signoff/specs/orphan.md fallback already recorded in the manifest.
+    // Must be a no-op — not re-run the whole migration.
+    const second = await migrateToIndex(vaultPath);
+    expect(second.migrated).toBe(false);
+  });
 });

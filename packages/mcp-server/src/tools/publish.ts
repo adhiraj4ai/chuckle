@@ -1,21 +1,10 @@
-import { simpleGit } from "simple-git";
 import {
   VaultManager,
   writeActiveFeature,
   type DocumentType,
   type PublishResult,
 } from "@chuckle/vault-core";
-
-async function resolveGitAuthor(vaultPath: string): Promise<{ name: string; email: string }> {
-  const git = simpleGit(vaultPath);
-  const [nameResult, emailResult] = await Promise.all([
-    git.getConfig("user.name"),
-    git.getConfig("user.email"),
-  ]);
-  const name = nameResult.value ?? "Unknown";
-  const email = emailResult.value ?? "unknown@local";
-  return { name, email };
-}
+import { resolveGitAuthor } from "./git-author.js";
 
 export async function handlePublish(
   vaultPath: string,

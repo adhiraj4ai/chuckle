@@ -1,23 +1,9 @@
-import { simpleGit } from "simple-git";
 import {
   VaultManager,
   type DocumentType,
   type PublishResult,
 } from "@chuckle/vault-core";
-
-async function resolveGitAuthor(
-  vaultPath: string
-): Promise<{ name: string; email: string }> {
-  const git = simpleGit(vaultPath);
-  const [nameResult, emailResult] = await Promise.all([
-    git.getConfig("user.name"),
-    git.getConfig("user.email"),
-  ]);
-  return {
-    name: nameResult.value ?? "Unknown",
-    email: emailResult.value ?? "unknown@local",
-  };
-}
+import { resolveGitAuthor } from "./git-author.js";
 
 /**
  * Submit a document that already lives in the vault (specs/ or plans/) for

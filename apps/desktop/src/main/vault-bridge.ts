@@ -113,9 +113,9 @@ async function walkMarkdown(dir: string): Promise<string[]> {
 /** Detect the project's existing docs (docs/ and .superpowers/) and register each
  *  markdown file in the vault manifest by project-relative path — no copy made. */
 async function importProjectDocs(projectRoot: string, vaultDir: string): Promise<number> {
-  const cfgRoots = ['docs', '.superpowers']
   const { name, email } = await resolveVaultAuthor(vaultDir)
   const vault = await VaultManager.open(vaultDir)
+  const cfgRoots = vault.config.doc_roots ?? ['docs', '.superpowers']
   let count = 0
   for (const root of cfgRoots) {
     for (const file of await walkMarkdown(path.join(projectRoot, root))) {

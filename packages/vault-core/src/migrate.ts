@@ -107,10 +107,31 @@ export async function migrateToIndex(
     .access(path.join(vaultPath, manifestRelPath))
     .then(() => true)
     .catch(() => false);
-  const hasCopies =
-    (await dirHasMarkdown(path.join(vaultPath, "specs"))) ||
-    (await dirHasMarkdown(path.join(vaultPath, "plans")));
-  if (indexExists && !hasCopies) return { migrated: false, unresolved: [] };
+
+  if (indexExists) {
+    // A vault is already migrated when index.json exists and every copy in
+    // specs/ or plans/ is already referenced by the manifest as a .signoff/…
+    // fallback.  Copies that ARE the manifest's fallback must not trigger
+    // re-migration (they are intentional orphan fallbacks, not unmigrated docs).
+    const existingManifest = await readManifest(vaultPath);
+    let hasUnmigrated = false;
+    for (const type of DOC_TYPES) {
+      const dir = path.join(vaultPath, type === "spec" ? "specs" : "plans");
+      let files: string[] = [];
+      try { files = await fs.readdir(dir); } catch { /* dir absent — nothing to check */ }
+      for (const f of files) {
+        if (!f.endsWith(".md")) continue;
+        const feature = f.slice(0, -3);
+        const fallbackRel = `.signoff/${type === "spec" ? "specs" : "plans"}/${feature}.md`;
+        if (getFeatureDoc(existingManifest, feature, type) !== fallbackRel) {
+          hasUnmigrated = true;
+          break;
+        }
+      }
+      if (hasUnmigrated) break;
+    }
+    if (!hasUnmigrated) return { migrated: false, unresolved: [] };
+  }
 
   const projectRoot = projectRootOf(vaultPath);
   let docRoots = ["docs", ".superpowers"];
@@ -124,13 +145,21 @@ export async function migrateToIndex(
   let manifest: Manifest = await readManifest(vaultPath);
 
   // 1. Map project docs into the manifest.
+  // Collect all candidates, sort them so the collision rule is deterministic
+  // (first by sorted path wins; later files for the same feature/type are ignored).
+  const allFiles: string[] = [];
   for (const root of docRoots) {
-    for (const file of await walkMarkdown(path.join(projectRoot, root))) {
-      const feature = inferFeatureName(path.basename(file));
-      if (!feature) continue;
-      const rel = path.relative(projectRoot, file).split(path.sep).join("/");
-      manifest = setFeatureDoc(manifest, feature, classifyDoc(rel), rel);
-    }
+    allFiles.push(...(await walkMarkdown(path.join(projectRoot, root))));
+  }
+  allFiles.sort();
+  for (const file of allFiles) {
+    const feature = inferFeatureName(path.basename(file));
+    if (!feature) continue;
+    const rel = path.relative(projectRoot, file).split(path.sep).join("/");
+    const type = classifyDoc(rel);
+    // Skip if this feature/type is already set (first-by-sorted-path wins).
+    if (getFeatureDoc(manifest, feature, type) !== null) continue;
+    manifest = setFeatureDoc(manifest, feature, type, rel);
   }
 
   // 2. For approvals with no project doc, keep the vault copy as a fallback.
