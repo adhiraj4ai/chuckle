@@ -35,10 +35,10 @@ describe('DocumentPane', () => {
     await waitFor(() => screen.getByRole('heading', { name: /user auth spec/i }))
   })
 
-  it('shows feature name and document type in the breadcrumb', async () => {
+  it('shows the human-readable feature name and a document-type tab in the header', async () => {
     render(<DocumentPane vaultPath="/vault" feature="user-auth" type="spec" onApprove={() => {}} onReject={() => {}} />)
-    await waitFor(() => screen.getByText('user-auth'))
-    // the type label "spec" (lowercase) is in the header breadcrumb
+    await waitFor(() => screen.getByText('User Auth'))
+    // the type tab "spec" (lowercase text, capitalized via CSS) sits beside the name
     expect(screen.getAllByText('spec').length).toBeGreaterThan(0)
   })
 })

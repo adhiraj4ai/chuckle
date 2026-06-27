@@ -3,7 +3,8 @@ import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import type { DocumentType, ReviewResult } from '@shared/ipc-types'
+import type { ApprovalStatus, DocumentType, ReviewResult } from '@shared/ipc-types'
+import { humanizeFeature } from '../lib/feature'
 import { MermaidDiagram } from './MermaidDiagram'
 
 /** Recursively collect text from a React markdown node (survives hljs token spans). */
@@ -45,14 +46,26 @@ function Markdown({ content }: { content: string }): React.ReactElement {
 }
 
 type ViewMode = 'read' | 'split' | 'edit'
+type DocStatus = ApprovalStatus | 'not_found'
 
 interface Props {
   vaultPath: string
   feature: string
   type: DocumentType
+  /** The feature's available document tabs (defaults to just the open type). */
+  docTypes?: { type: DocumentType; status: DocStatus }[]
+  /** Switch the open document type within this feature. */
+  onSelectType?: (type: DocumentType) => void
   onApprove: () => void
   onReject: () => void
   onSaved?: (result: ReviewResult) => void
+}
+
+function statusDot(status: DocStatus): string {
+  if (status === 'pending') return 'bg-wait'
+  if (status === 'approved') return 'bg-ok'
+  if (status === 'rejected') return 'bg-stop'
+  return 'bg-fg/20'
 }
 
 // --- toolbar icons (16px line icons) ---
@@ -107,10 +120,13 @@ export function DocumentPane({
   vaultPath,
   feature,
   type,
+  docTypes,
+  onSelectType,
   onApprove: _onApprove,
   onReject: _onReject,
   onSaved,
 }: Props): React.ReactElement {
+  const tabs = docTypes ?? [{ type, status: 'not_found' as DocStatus }]
   const [content, setContent] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('read')
   const [draft, setDraft] = useState('')
@@ -226,10 +242,29 @@ export function DocumentPane({
     <div className="flex-1 flex flex-col overflow-hidden bg-app min-w-0">
       <header className="bg-surface border-b border-border">
         <div className="max-w-[1100px] mx-auto w-full px-6 py-2 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 font-mono text-[11px] text-fg/45 min-w-0">
-            <span className="text-fg/70 truncate">{feature}</span>
-            <span className="text-fg/25">/</span>
-            <span>{type}</span>
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-[13.5px] font-semibold text-fg truncate" title={humanizeFeature(feature)}>
+              {humanizeFeature(feature)}
+            </h1>
+            <div className="flex items-center gap-0.5">
+              {tabs.map((t) => {
+                const isActive = t.type === type
+                return (
+                  <button
+                    key={t.type}
+                    onClick={() => onSelectType?.(t.type)}
+                    aria-label={t.type}
+                    aria-pressed={isActive}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] font-medium capitalize transition-colors ${
+                      isActive ? 'bg-app text-fg' : 'text-fg/45 hover:text-fg/80 hover:bg-app/60'
+                    }`}
+                  >
+                    <span className={`w-1.5 h-1.5 rounded-full ${statusDot(t.status)}`} />
+                    {t.type}
+                  </button>
+                )
+              })}
+            </div>
           </div>
 
           <div className="flex items-center gap-1 shrink-0">

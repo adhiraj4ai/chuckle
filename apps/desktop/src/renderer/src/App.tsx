@@ -4,11 +4,10 @@ import { Sidebar } from './components/Sidebar'
 import { DocumentPane } from './components/DocumentPane'
 import { ReviewPanel } from './components/ReviewPanel'
 import { StatusBar } from './components/StatusBar'
-import { FeatureTabs } from './components/FeatureTabs'
 import { GitPanel } from './components/GitPanel'
 import { useVault } from './hooks/useVault'
 import { useAutoSync } from './hooks/useAutoSync'
-import type { ApprovalRecord, DocumentType, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
+import type { ApprovalRecord, ApprovalStatus, DocumentType, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
 
 const DOC_TYPES: DocumentType[] = ['spec', 'plan']
 
@@ -18,11 +17,15 @@ function SelectedDocument({
   vaultPath,
   feature,
   type,
+  docTypes,
+  onSelectType,
   onActionComplete,
 }: {
   vaultPath: string
   feature: string
   type: DocumentType
+  docTypes: { type: DocumentType; status: ApprovalStatus | 'not_found' }[]
+  onSelectType: (type: DocumentType) => void
   onActionComplete: ActionDone
 }): React.ReactElement {
   const [record, setRecord] = useState<ApprovalRecord | null | undefined>(undefined)
@@ -57,6 +60,8 @@ function SelectedDocument({
         vaultPath={vaultPath}
         feature={feature}
         type={type}
+        docTypes={docTypes}
+        onSelectType={onSelectType}
         onApprove={() => onDone()}
         onReject={() => onDone()}
         onSaved={onDone}
@@ -168,7 +173,6 @@ export function App(): React.ReactElement {
           onSwitchVault={closeVault}
         />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-          {active && <FeatureTabs types={activeTypes} active={active.type} onSelect={selectType} />}
           {!active ? (
             <div className="flex-1 grid place-items-center px-8">
               <div className="text-center max-w-sm">
@@ -183,10 +187,12 @@ export function App(): React.ReactElement {
             </div>
           ) : (
             <SelectedDocument
-              key={`${active.feature}/${active.type}`}
+              key={active.feature}
               vaultPath={state.vaultPath}
               feature={active.feature}
               type={active.type}
+              docTypes={activeTypes}
+              onSelectType={selectType}
               onActionComplete={onActionComplete}
             />
           )}
