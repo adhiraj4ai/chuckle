@@ -26,17 +26,17 @@ beforeEach(() => {
 
 describe('DocumentPane', () => {
   it('shows loading state initially', () => {
-    render(<DocumentPane vaultPath="/vault" feature="user-auth" type="spec" onApprove={() => {}} onReject={() => {}} />)
+    render(<DocumentPane vaultPath="/vault" feature="user-auth" type="spec" />)
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
   it('renders document heading from markdown', async () => {
-    render(<DocumentPane vaultPath="/vault" feature="user-auth" type="spec" onApprove={() => {}} onReject={() => {}} />)
+    render(<DocumentPane vaultPath="/vault" feature="user-auth" type="spec" />)
     await waitFor(() => screen.getByRole('heading', { name: /user auth spec/i }))
   })
 
   it('shows the human-readable feature name and a document-type tab in the header', async () => {
-    render(<DocumentPane vaultPath="/vault" feature="user-auth" type="spec" onApprove={() => {}} onReject={() => {}} />)
+    render(<DocumentPane vaultPath="/vault" feature="user-auth" type="spec" />)
     await waitFor(() => screen.getByText('User Auth'))
     // the type tab "spec" (lowercase text, capitalized via CSS) sits beside the name
     expect(screen.getAllByText('spec').length).toBeGreaterThan(0)

@@ -56,8 +56,6 @@ interface Props {
   docTypes?: { type: DocumentType; status: DocStatus }[]
   /** Switch the open document type within this feature. */
   onSelectType?: (type: DocumentType) => void
-  onApprove: () => void
-  onReject: () => void
   onSaved?: (result: ReviewResult) => void
 }
 
@@ -122,8 +120,6 @@ export function DocumentPane({
   type,
   docTypes,
   onSelectType,
-  onApprove: _onApprove,
-  onReject: _onReject,
   onSaved,
 }: Props): React.ReactElement {
   const tabs = docTypes ?? [{ type, status: 'not_found' as DocStatus }]

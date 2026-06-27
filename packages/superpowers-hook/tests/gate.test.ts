@@ -119,6 +119,7 @@ describe("evaluateGate", () => {
     await writeApproval(vaultPath, rec!);
     const d = await evaluateGate(writeEvent("docs/plans/2026-06-27-user-auth.md"));
     expect(d.allow).toBe(false);
+    expect(d.reason).toMatch(/spec/i);
   });
 
   it("allows the plan doc once the spec is approved", async () => {

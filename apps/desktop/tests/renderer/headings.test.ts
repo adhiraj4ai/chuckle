@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { it, expect } from 'vitest'
 import { extractHeadings } from '@renderer/lib/headings'
 it('extracts heading slug, text, and 1-based line', () => {
   const md = '# Title\n\nintro\n\n## Goals\n\n- a\n\n## Non-Goals\n'

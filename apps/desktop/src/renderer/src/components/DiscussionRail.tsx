@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import type { DocumentType, CommentsFile, CommentThread, CommentEntry } from '@shared/ipc-types'
+import type { DocumentType, CommentsFile, CommentThread } from '@shared/ipc-types'
 import { extractHeadings, type Heading } from '../lib/headings.js'
 
 interface Props {
@@ -55,7 +55,7 @@ function ThreadItem({
 
   return (
     <div className={`rounded-lg border border-border bg-app p-3 text-[12px] ${thread.resolved ? 'opacity-60' : ''}`}>
-      {thread.comments.map((c: CommentEntry) => (
+      {thread.comments.map((c) => (
         <div key={c.id} className="mb-2 last:mb-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className="font-medium text-fg/80 truncate">{c.by}</span>

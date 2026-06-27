@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import type { ApprovalRecord, DocumentType, ReviewAction, ReviewerStatus, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
+import type { ApprovalRecord, ApprovalStatus, DocumentType, ReviewAction, ReviewerStatus, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
 import { ReviewHistory } from './ReviewHistory'
 import { ReviewerSettings } from './ReviewerSettings'
 
@@ -50,6 +50,8 @@ interface Props {
   type: DocumentType
   /** undefined = still loading, null = no record yet */
   record: ApprovalRecord | null | undefined
+  /** Derived document status from the sidebar/vault index (authoritative for header pill). */
+  derivedStatus: ApprovalStatus | 'not_found'
   workflow: WorkflowConfig | undefined
   onActionComplete: (result?: ReviewResult) => void
 }
@@ -59,14 +61,13 @@ export function ReviewPanel({
   feature,
   type,
   record,
+  derivedStatus,
   workflow,
   onActionComplete,
 }: Props): React.ReactElement {
-  const status = record?.status ?? 'not_found'
   const submittedBy = record?.history.find((e) => e.action === 'submitted')?.by
 
   const [authorEmail, setAuthorEmail] = useState<string>('')
-  const [isStale, setIsStale] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [busy, setBusy] = useState(false)
   const [vaultRemote, setVaultRemote] = useState<string | null | undefined>(undefined)
@@ -80,15 +81,6 @@ export function ReviewPanel({
     })
     return () => { alive = false }
   }, [vaultPath])
-
-  useEffect(() => {
-    if (!record) { setIsStale(false); return }
-    let alive = true
-    window.chuckle.document.isStale(vaultPath, feature, type).then((s) => {
-      if (alive) setIsStale(s)
-    })
-    return () => { alive = false }
-  }, [vaultPath, feature, type, record])
 
   useEffect(() => {
     let alive = true
@@ -171,22 +163,17 @@ export function ReviewPanel({
         ) : (
           <div className="space-y-2.5">
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${statusPill(status)}`}
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium ${statusPill(derivedStatus)}`}
             >
-              <span className={`w-1.5 h-1.5 rounded-full ${statusDot(status)}`} />
-              {statusLabel(status)}
+              <span className={`w-1.5 h-1.5 rounded-full ${statusDot(derivedStatus)}`} />
+              {statusLabel(derivedStatus)}
             </span>
-            {isStale && record?.status === 'approved' && (
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium bg-wait-soft text-wait">
-                Approved — changed since approval
-              </span>
-            )}
             {submittedBy && (
               <p className="text-[12px] text-fg/50">
                 Submitted by <span className="text-fg/75">{submittedBy}</span>
               </p>
             )}
-            {workflow && status !== 'approved' && (
+            {workflow && derivedStatus !== 'approved' && (
               <p className="text-[11.5px] leading-relaxed text-fg/45">
                 Needs {workflow.min_approvals} approval
                 {workflow.min_approvals === 1 ? '' : 's'}

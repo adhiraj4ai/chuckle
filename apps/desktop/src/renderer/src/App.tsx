@@ -89,8 +89,6 @@ function SelectedDocument({
           type={type}
           docTypes={docTypes}
           onSelectType={onSelectType}
-          onApprove={() => onDone()}
-          onReject={() => onDone()}
           onSaved={onDone}
         />
         {showDiscussion ? (
@@ -108,6 +106,7 @@ function SelectedDocument({
             feature={feature}
             type={type}
             record={record}
+            derivedStatus={docTypes.find((d) => d.type === type)?.status ?? 'not_found'}
             workflow={workflow}
             onActionComplete={onDone}
           />
