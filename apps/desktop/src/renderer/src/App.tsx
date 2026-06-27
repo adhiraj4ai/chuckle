@@ -3,6 +3,7 @@ import { VaultSwitcher } from './components/VaultSwitcher'
 import { Sidebar } from './components/Sidebar'
 import { DocumentPane } from './components/DocumentPane'
 import { ReviewPanel } from './components/ReviewPanel'
+import { DiscussionRail } from './components/DiscussionRail.js'
 import { StatusBar } from './components/StatusBar'
 import { GitPanel } from './components/GitPanel'
 import { useVault } from './hooks/useVault'
@@ -31,6 +32,8 @@ function SelectedDocument({
   const [record, setRecord] = useState<ApprovalRecord | null | undefined>(undefined)
   const [workflow, setWorkflow] = useState<WorkflowConfig | undefined>(undefined)
   const [reload, setReload] = useState(0)
+  const [showDiscussion, setShowDiscussion] = useState(false)
+  const [markdown, setMarkdown] = useState('')
 
   useEffect(() => {
     setRecord(undefined)
@@ -48,6 +51,14 @@ function SelectedDocument({
       })
   }, [vaultPath, feature, type, reload])
 
+  useEffect(() => {
+    setMarkdown('')
+    window.chuckle.document
+      .read(vaultPath, feature, type)
+      .then(setMarkdown)
+      .catch(() => setMarkdown(''))
+  }, [vaultPath, feature, type])
+
   // refetch this document's record after an action, then bubble up
   const onDone: ActionDone = (result) => {
     setReload((n) => n + 1)
@@ -55,25 +66,53 @@ function SelectedDocument({
   }
 
   return (
-    <div className="flex-1 flex overflow-hidden">
-      <DocumentPane
-        vaultPath={vaultPath}
-        feature={feature}
-        type={type}
-        docTypes={docTypes}
-        onSelectType={onSelectType}
-        onApprove={() => onDone()}
-        onReject={() => onDone()}
-        onSaved={onDone}
-      />
-      <ReviewPanel
-        vaultPath={vaultPath}
-        feature={feature}
-        type={type}
-        record={record}
-        workflow={workflow}
-        onActionComplete={onDone}
-      />
+    <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Discussion toggle bar */}
+      <div className="flex items-center justify-end px-4 py-1.5 bg-surface border-b border-border gap-2">
+        <button
+          onClick={() => setShowDiscussion((v) => !v)}
+          aria-pressed={showDiscussion}
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11.5px] font-medium transition ${
+            showDiscussion ? 'bg-iris/10 text-iris' : 'text-fg/45 hover:text-fg/80 hover:bg-app/60'
+          }`}
+        >
+          <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.4">
+            <path d="M2 3.5C2 3 2.4 2.5 3 2.5h10c.6 0 1 .5 1 1v7c0 .5-.4 1-1 1H5l-3 2V3.5z" strokeLinejoin="round" />
+          </svg>
+          Discussion
+        </button>
+      </div>
+      <div className="flex-1 flex overflow-hidden">
+        <DocumentPane
+          vaultPath={vaultPath}
+          feature={feature}
+          type={type}
+          docTypes={docTypes}
+          onSelectType={onSelectType}
+          onApprove={() => onDone()}
+          onReject={() => onDone()}
+          onSaved={onDone}
+        />
+        {showDiscussion ? (
+          <aside className="w-80 min-w-80 border-l border-border bg-surface flex flex-col h-full overflow-hidden">
+            <DiscussionRail
+              vaultPath={vaultPath}
+              feature={feature}
+              type={type}
+              markdown={markdown}
+            />
+          </aside>
+        ) : (
+          <ReviewPanel
+            vaultPath={vaultPath}
+            feature={feature}
+            type={type}
+            record={record}
+            workflow={workflow}
+            onActionComplete={onDone}
+          />
+        )}
+      </div>
     </div>
   )
 }

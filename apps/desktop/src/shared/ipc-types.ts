@@ -10,6 +10,8 @@ import type {
   DocumentType,
   ReviewAction,
   CommentsFile,
+  CommentThread,
+  CommentEntry,
 } from '@chuckle/vault-core'
 
 export type {
@@ -24,6 +26,8 @@ export type {
   DocumentType,
   ReviewAction,
   CommentsFile,
+  CommentThread,
+  CommentEntry,
 }
 
 export interface FeatureEntry {
