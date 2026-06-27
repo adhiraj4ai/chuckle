@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
 import { join } from 'path'
 import {
   listVaults,
@@ -17,6 +17,7 @@ import {
   getVaultStatus,
   pushVault,
   publishBranch,
+  getVaultAuthor,
 } from './vault-bridge.js'
 
 function createWindow(): void {
@@ -50,6 +51,8 @@ function registerIpcHandlers(): void {
   ipcMain.handle('vault:status', (_e, { vaultPath }) => getVaultStatus(vaultPath))
   ipcMain.handle('vault:push', (_e, { vaultPath }) => pushVault(vaultPath))
   ipcMain.handle('vault:publish-branch', (_e, { vaultPath }) => publishBranch(vaultPath))
+  ipcMain.handle('vault:author', (_e, { vaultPath }) => getVaultAuthor(vaultPath))
+  ipcMain.handle('app:open-external', (_e, { url }) => shell.openExternal(url))
   ipcMain.handle('features:list', (_e, { vaultPath }) => listFeatures(vaultPath))
   ipcMain.handle('document:read', (_e, { vaultPath, feature, type }) => readDocument(vaultPath, feature, type))
   ipcMain.handle('document:write', (_e, { vaultPath, feature, type, content }) =>

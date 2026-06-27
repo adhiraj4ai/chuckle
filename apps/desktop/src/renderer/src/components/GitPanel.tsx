@@ -70,6 +70,15 @@ export function GitPanel({ vaultPath, onClose }: Props): React.ReactElement {
     setBusy(null)
   }
 
+  async function publish(): Promise<void> {
+    setBusy('push')
+    setNote(null)
+    const r = await window.chuckle.vault.publishBranch(vaultPath)
+    setNote(r.ok ? 'Published branch & set upstream.' : `Publish failed: ${r.error ?? 'unknown error'}`)
+    await refresh()
+    setBusy(null)
+  }
+
   const ahead = status?.ahead ?? 0
   const behind = status?.behind ?? 0
 
@@ -114,13 +123,23 @@ export function GitPanel({ vaultPath, onClose }: Props): React.ReactElement {
           >
             {busy === 'pull' ? 'Pulling…' : 'Pull'}
           </button>
-          <button
-            onClick={push}
-            disabled={busy !== null}
-            className="text-[12px] font-semibold px-2.5 py-1 rounded-md bg-iris text-white hover:bg-iris-ink disabled:opacity-50"
-          >
-            {busy === 'push' ? 'Pushing…' : `Push${ahead ? ` (${ahead})` : ''}`}
-          </button>
+          {!status?.tracking && remote ? (
+            <button
+              onClick={publish}
+              disabled={busy !== null}
+              className="text-[12px] font-semibold px-2.5 py-1 rounded-md bg-iris text-white hover:bg-iris-ink disabled:opacity-50"
+            >
+              {busy === 'push' ? 'Publishing…' : 'Publish branch'}
+            </button>
+          ) : (
+            <button
+              onClick={push}
+              disabled={busy !== null || !status?.tracking}
+              className="text-[12px] font-semibold px-2.5 py-1 rounded-md bg-iris text-white hover:bg-iris-ink disabled:opacity-50"
+            >
+              {busy === 'push' ? 'Pushing…' : `Push${ahead ? ` (${ahead})` : ''}`}
+            </button>
+          )}
         </div>
 
         {note && (

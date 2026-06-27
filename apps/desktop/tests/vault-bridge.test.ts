@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import os from 'node:os'
+import { simpleGit } from 'simple-git'
 import { VaultManager } from '@chuckle/vault-core'
 import {
   listVaults,
@@ -12,6 +13,8 @@ import {
   getDocumentApproval,
   approveDocument,
   rejectDocument,
+  publishBranch,
+  getVaultStatus,
 } from '../src/main/vault-bridge.js'
 
 let tmpDir: string
@@ -139,5 +142,41 @@ describe('rejectDocument', () => {
     const lastEntry = record!.history.at(-1)!
     expect(lastEntry.action).toBe('rejected')
     expect(lastEntry.message).toBe('Needs more detail')
+  })
+})
+
+describe('git sync of review decisions', () => {
+  it('records the decision even when there is no remote (pushed: false)', async () => {
+    await seedDoc('user-auth', 'spec')
+    const result = await approveDocument(vaultPath, 'user-auth', 'spec', null)
+    expect(result.pushed).toBe(false)
+    // the decision is still committed locally
+    const record = await getDocumentApproval(vaultPath, 'user-auth', 'spec')
+    expect(record?.status).toBe('approved')
+  })
+
+  it('publishes the branch and pushes decisions to a configured remote', async () => {
+    // a bare remote on the local filesystem
+    const remotePath = path.join(tmpDir, 'remote.git')
+    await simpleGit().init(['--bare', remotePath])
+    await simpleGit(vaultPath).addRemote('origin', remotePath)
+
+    await seedDoc('user-auth', 'plan')
+
+    // before upstream is set, push has no target
+    const beforeUpstream = await getVaultStatus(vaultPath)
+    expect(beforeUpstream.tracking).toBeNull()
+
+    const published = await publishBranch(vaultPath)
+    expect(published.ok).toBe(true)
+
+    // now an approval pushes to the remote
+    const result = await approveDocument(vaultPath, 'user-auth', 'plan', null)
+    expect(result.pushed).toBe(true)
+
+    // the branch now tracks origin and nothing is left unpushed
+    const after = await getVaultStatus(vaultPath)
+    expect(after.tracking).not.toBeNull()
+    expect(after.ahead).toBe(0)
   })
 })

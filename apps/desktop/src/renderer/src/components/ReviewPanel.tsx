@@ -1,5 +1,5 @@
 import React from 'react'
-import type { ApprovalRecord, DocumentType, WorkflowConfig } from '@shared/ipc-types'
+import type { ApprovalRecord, DocumentType, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
 import { ReviewHistory } from './ReviewHistory'
 import { ApproveBar } from './ApproveBar'
 
@@ -33,7 +33,7 @@ interface Props {
   /** undefined = still loading, null = no record yet */
   record: ApprovalRecord | null | undefined
   workflow: WorkflowConfig | undefined
-  onActionComplete: () => void
+  onActionComplete: (result?: ReviewResult) => void
 }
 
 export function ReviewPanel({

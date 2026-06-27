@@ -1,21 +1,235 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import type { GitStatus } from '@shared/ipc-types'
+import { AUTO_SYNC_OPTIONS } from '../hooks/useAutoSync'
+
+const PROJECT_DOCS_URL = 'https://github.com/adhiraj4ai/chuckle'
 
 interface Props {
   vaultPath: string
   vaultName: string
+  syncKey: number
+  lastSyncedAt: number | null
+  syncing: boolean
+  autoSyncMs: number
+  onSetAutoSync: (ms: number) => void
+  onSyncNow: () => void
   onOpenSourceControl: () => void
+  onSwitchVault: () => void
 }
 
-interface Repo {
-  label: string
-  isGitHub: boolean
-}
-
-function parseRepo(url: string | null): Repo {
-  if (!url) return { label: 'No remote', isGitHub: false }
+function ghRepo(url: string | null): { label: string; web: string | null } {
+  if (!url) return { label: 'No remote', web: null }
   const gh = url.match(/github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/)
-  if (gh) return { label: `${gh[1]}/${gh[2]}`, isGitHub: true }
-  return { label: url.replace(/^https?:\/\//, '').replace(/\.git$/, ''), isGitHub: false }
+  if (gh) return { label: `${gh[1]}/${gh[2]}`, web: `https://github.com/${gh[1]}/${gh[2]}` }
+  return { label: url.replace(/^https?:\/\//, '').replace(/\.git$/, ''), web: null }
+}
+
+function relTime(ts: number | null): string {
+  if (!ts) return 'not synced'
+  const secs = Math.max(0, Math.round((Date.now() - ts) / 1000))
+  if (secs < 10) return 'synced just now'
+  if (secs < 60) return `synced ${secs}s ago`
+  const mins = Math.round(secs / 60)
+  if (mins < 60) return `synced ${mins}m ago`
+  const hrs = Math.round(mins / 60)
+  if (hrs < 24) return `synced ${hrs}h ago`
+  return `synced ${Math.round(hrs / 24)}d ago`
+}
+
+const cls =
+  'flex items-center gap-1.5 px-2 h-full text-white/55 hover:text-white hover:bg-white/[0.06] transition-colors'
+
+function Sep(): React.ReactElement {
+  return <span className="w-px h-3.5 bg-white/[0.12]" />
+}
+
+export function StatusBar({
+  vaultPath,
+  vaultName,
+  syncKey,
+  lastSyncedAt,
+  syncing,
+  autoSyncMs,
+  onSetAutoSync,
+  onSyncNow,
+  onOpenSourceControl,
+  onSwitchVault,
+}: Props): React.ReactElement {
+  const [remote, setRemote] = useState<string | null>(null)
+  const [status, setStatus] = useState<GitStatus | null>(null)
+  const [author, setAuthor] = useState<{ name: string; email: string } | null>(null)
+  const [open, setOpen] = useState<'identity' | 'vault' | 'settings' | null>(null)
+  const barRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    let alive = true
+    Promise.all([
+      window.chuckle.vault.getRemote(vaultPath),
+      window.chuckle.vault.status(vaultPath),
+      window.chuckle.vault.author(vaultPath),
+    ]).then(([r, s, a]) => {
+      if (!alive) return
+      setRemote(r)
+      setStatus(s)
+      setAuthor(a)
+    })
+    return () => {
+      alive = false
+    }
+  }, [vaultPath, syncKey])
+
+  // close popovers on outside click
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e: MouseEvent): void => {
+      if (barRef.current && !barRef.current.contains(e.target as Node)) setOpen(null)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+
+  const repo = ghRepo(remote)
+  const noUpstream = !status?.tracking
+  const ahead = status?.ahead ?? 0
+  const unsynced = noUpstream || ahead > 0
+  const autoLabel = AUTO_SYNC_OPTIONS.find((o) => o.ms === autoSyncMs)?.label ?? 'Off'
+
+  async function contribute(): Promise<void> {
+    if (noUpstream && remote) {
+      await window.chuckle.vault.publishBranch(vaultPath)
+      onSyncNow()
+    } else if (repo.web) {
+      await window.chuckle.openExternal(repo.web)
+    }
+  }
+
+  return (
+    <footer
+      ref={barRef}
+      className="relative h-7 shrink-0 bg-ink border-t border-white/[0.08] flex items-stretch text-[11px] font-mono text-white/55"
+    >
+      {/* Identity */}
+      <button className={cls} onClick={() => setOpen(open === 'identity' ? null : 'identity')} title="Reviewer identity">
+        <span className="w-1.5 h-1.5 rounded-full bg-ok" />
+        <span className="text-white/70">{author?.name ?? '…'}</span>
+      </button>
+      {open === 'identity' && author && (
+        <Popover>
+          <p className="text-ink font-medium">{author.name}</p>
+          <p className="text-ink/55">{author.email}</p>
+          <p className="text-ink/40 mt-1 text-[11px]">Decisions are committed under this git identity.</p>
+        </Popover>
+      )}
+      <Sep />
+
+      {/* Vault */}
+      <button className={cls} onClick={() => setOpen(open === 'vault' ? null : 'vault')} title="Vault">
+        {vaultName}
+      </button>
+      {open === 'vault' && (
+        <Popover>
+          <p className="text-ink font-medium">{vaultName}</p>
+          <p className="text-ink/45 font-mono text-[11px] truncate">{vaultPath}</p>
+          <button
+            onClick={() => {
+              setOpen(null)
+              onSwitchVault()
+            }}
+            className="mt-2 text-iris hover:underline text-[12px]"
+          >
+            Switch project
+          </button>
+        </Popover>
+      )}
+      <Sep />
+
+      {/* Remote */}
+      <button className={cls} onClick={onOpenSourceControl} title={remote ?? 'No git remote'}>
+        <GitHubMark />
+        <span className={repo.web ? 'text-white/70' : 'text-white/40'}>{repo.label}</span>
+      </button>
+      <Sep />
+
+      {/* Changes (unsynced) */}
+      <button className={cls} onClick={onOpenSourceControl} title="Unsynced commits">
+        <span className={unsynced ? 'text-wait' : 'text-white/55'}>
+          {noUpstream ? 'no upstream' : ahead > 0 ? `↑ ${ahead}` : 'up to date'}
+        </span>
+      </button>
+      <Sep />
+
+      {/* Sync now */}
+      <button className={cls} onClick={onSyncNow} disabled={syncing} title="Pull and push now">
+        <SyncIcon spin={syncing} />
+        <span>{syncing ? 'syncing…' : relTime(lastSyncedAt)}</span>
+      </button>
+
+      <span className="flex-1" />
+
+      {/* History */}
+      <button className={cls} onClick={onOpenSourceControl} title="Commit history">
+        <HistoryIcon />
+        History
+      </button>
+      <Sep />
+
+      {/* Contribute */}
+      <button className={cls} onClick={contribute} title={noUpstream ? 'Publish branch' : 'Open on GitHub'}>
+        <BranchIcon />
+        {noUpstream && remote ? 'Publish' : 'Contribute'}
+      </button>
+      <Sep />
+
+      {/* Docs */}
+      <button className={cls} onClick={() => window.chuckle.openExternal(PROJECT_DOCS_URL)} title="Documentation">
+        <BookIcon />
+        Docs
+      </button>
+      <Sep />
+
+      {/* Settings / auto-sync */}
+      <button className={cls} onClick={() => setOpen(open === 'settings' ? null : 'settings')} title="Settings" aria-label="Settings">
+        <GearIcon />
+      </button>
+      {open === 'settings' && (
+        <Popover align="right">
+          <p className="text-[11px] font-semibold text-ink/45 mb-1.5">Auto-sync with git</p>
+          <div className="flex flex-col">
+            {AUTO_SYNC_OPTIONS.map((o) => (
+              <button
+                key={o.ms}
+                onClick={() => onSetAutoSync(o.ms)}
+                className={`flex items-center gap-2 px-2 py-1 rounded text-[12px] text-left ${
+                  o.ms === autoSyncMs ? 'bg-iris-soft text-iris-ink font-medium' : 'text-ink/70 hover:bg-mist'
+                }`}
+              >
+                <span className="w-3">{o.ms === autoSyncMs ? '✓' : ''}</span>
+                {o.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-ink/40 mt-1.5">Currently: {autoLabel}</p>
+        </Popover>
+      )}
+    </footer>
+  )
+}
+
+function Popover({
+  children,
+  align = 'left',
+}: {
+  children: React.ReactNode
+  align?: 'left' | 'right'
+}): React.ReactElement {
+  return (
+    <div
+      className={`absolute bottom-8 ${align === 'right' ? 'right-2' : 'left-2'} z-40 w-60 rounded-xl border border-line bg-white shadow-panel p-3 font-sans text-[13px] text-ink`}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  )
 }
 
 function GitHubMark(): React.ReactElement {
@@ -25,35 +239,43 @@ function GitHubMark(): React.ReactElement {
     </svg>
   )
 }
-
-export function StatusBar({ vaultPath, vaultName, onOpenSourceControl }: Props): React.ReactElement {
-  const [remote, setRemote] = useState<string | null | undefined>(undefined)
-
-  useEffect(() => {
-    let alive = true
-    window.chuckle.vault.getRemote(vaultPath).then((r) => {
-      if (alive) setRemote(r)
-    })
-    return () => {
-      alive = false
-    }
-  }, [vaultPath])
-
-  const repo = parseRepo(remote ?? null)
-
+function SyncIcon({ spin }: { spin: boolean }): React.ReactElement {
   return (
-    <footer className="h-7 shrink-0 bg-ink border-t border-white/[0.08] flex items-center gap-3 px-2 text-[11px] font-mono text-white/55">
-      <button
-        onClick={onOpenSourceControl}
-        title="Open source control"
-        className="flex items-center gap-1.5 px-1.5 py-0.5 rounded hover:bg-white/[0.08] transition-colors"
-      >
-        {repo.isGitHub ? <GitHubMark /> : <span className="inline-block w-3.5 h-3.5" />}
-        <span className={repo.isGitHub ? 'text-white/75' : 'text-white/40'}>
-          {remote === undefined ? '…' : repo.label}
-        </span>
-      </button>
-      <span className="ml-auto text-white/35 pr-1">{vaultName}</span>
-    </footer>
+    <svg viewBox="0 0 16 16" className={`w-3.5 h-3.5 ${spin ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M13.5 8a5.5 5.5 0 01-9.4 3.9M2.5 8a5.5 5.5 0 019.4-3.9" strokeLinecap="round" />
+      <path d="M12 1.5V4.5H9M4 14.5V11.5H7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function HistoryIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M2 8l2.5-3 2 2.5L9 4l2 3 3-4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function BranchIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.3">
+      <circle cx="4" cy="3.5" r="1.5" />
+      <circle cx="4" cy="12.5" r="1.5" />
+      <circle cx="12" cy="3.5" r="1.5" />
+      <path d="M4 5v6M12 5v1.5A3.5 3.5 0 018.5 10H6" strokeLinecap="round" />
+    </svg>
+  )
+}
+function BookIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.3">
+      <path d="M8 3.5C6.5 2.5 4 2.5 2.5 3v9C4 11.5 6.5 11.5 8 12.5M8 3.5c1.5-1 4-1 5.5-.5v9c-1.5-.5-4-.5-5.5.5M8 3.5v9" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function GearIcon(): React.ReactElement {
+  return (
+    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.3">
+      <circle cx="8" cy="8" r="2" />
+      <path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M13 3l-1.4 1.4M4.4 11.6L3 13" strokeLinecap="round" />
+    </svg>
   )
 }

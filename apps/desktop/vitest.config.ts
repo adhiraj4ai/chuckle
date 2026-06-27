@@ -8,7 +8,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/renderer/src/test-setup.ts'],
-    include: ['tests/renderer/**/*.test.tsx'],
+    include: ['tests/renderer/**/*.test.{ts,tsx}'],
   },
   resolve: {
     alias: {

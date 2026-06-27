@@ -163,6 +163,11 @@ export async function readVaultWorkflows(vaultPath: string): Promise<VaultWorkfl
   return readWorkflows(vaultPath)
 }
 
+/** The git identity (name + email) configured for this vault. */
+export async function getVaultAuthor(vaultPath: string): Promise<{ name: string; email: string }> {
+  return resolveVaultAuthor(vaultPath)
+}
+
 /** Recent commits in the vault repo, newest first. */
 export async function getVaultLog(vaultPath: string): Promise<GitCommit[]> {
   try {

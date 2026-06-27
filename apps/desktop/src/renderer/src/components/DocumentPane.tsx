@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import type { Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
-import type { DocumentType } from '@shared/ipc-types'
+import type { DocumentType, ReviewResult } from '@shared/ipc-types'
 import { MermaidDiagram } from './MermaidDiagram'
 
 /** Recursively collect text from a React markdown node (survives hljs token spans). */
@@ -52,6 +52,7 @@ interface Props {
   type: DocumentType
   onApprove: () => void
   onReject: () => void
+  onSaved?: (result: ReviewResult) => void
 }
 
 // --- toolbar icons (16px line icons) ---
@@ -108,6 +109,7 @@ export function DocumentPane({
   type,
   onApprove: _onApprove,
   onReject: _onReject,
+  onSaved,
 }: Props): React.ReactElement {
   const [content, setContent] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('read')
@@ -143,9 +145,10 @@ export function DocumentPane({
   async function save(): Promise<void> {
     setSaving(true)
     try {
-      await window.chuckle.document.write(vaultPath, feature, type, draft)
+      const result = await window.chuckle.document.write(vaultPath, feature, type, draft)
       setContent(draft)
       setView('read')
+      onSaved?.(result)
     } finally {
       setSaving(false)
     }

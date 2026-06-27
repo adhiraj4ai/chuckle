@@ -14,6 +14,7 @@ const mockChuckle: ChuckleAPI = {
     status: vi.fn(),
     push: vi.fn(),
     publishBranch: vi.fn(),
+    author: vi.fn(),
   },
   features: {
     list: vi.fn(),
@@ -28,6 +29,7 @@ const mockChuckle: ChuckleAPI = {
   workflows: {
     read: vi.fn(),
   },
+  openExternal: vi.fn(),
 }
 
 Object.defineProperty(window, 'chuckle', {

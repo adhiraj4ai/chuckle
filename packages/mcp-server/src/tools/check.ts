@@ -1,5 +1,6 @@
 import {
   getApprovalStatus,
+  pullLatest,
   type DocumentType,
   type CheckApprovalResult,
 } from "@chuckle/vault-core";
@@ -21,6 +22,14 @@ export async function handleCheck(
     throw new Error(
       `document_type must be "spec" or "plan", got: ${String(document_type)}`
     );
+  }
+
+  // Pull the latest first so the developer sees the reviewer's newest decision,
+  // not a stale local clone. Best-effort: offline / no-remote falls back to local.
+  try {
+    await pullLatest(vaultPath);
+  } catch {
+    // no remote / offline — read whatever is local
   }
 
   return getApprovalStatus(

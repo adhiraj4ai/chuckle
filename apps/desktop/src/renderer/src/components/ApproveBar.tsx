@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
-import type { ApprovalStatus, DocumentType } from '@shared/ipc-types'
+import type { ApprovalStatus, DocumentType, ReviewResult } from '@shared/ipc-types'
 
 interface Props {
   vaultPath: string
   feature: string
   type: DocumentType
   status: ApprovalStatus | 'not_found'
-  onActionComplete: () => void
+  onActionComplete: (result?: ReviewResult) => void
 }
 
 export function ApproveBar({
@@ -24,19 +24,19 @@ export function ApproveBar({
 
   async function handleApprove(): Promise<void> {
     setLoading(true)
-    await window.chuckle.document.approve(vaultPath, feature, type, null)
+    const result = await window.chuckle.document.approve(vaultPath, feature, type, null)
     setLoading(false)
-    onActionComplete()
+    onActionComplete(result)
   }
 
   async function handleReject(): Promise<void> {
     if (!message.trim()) return
     setLoading(true)
-    await window.chuckle.document.reject(vaultPath, feature, type, message)
+    const result = await window.chuckle.document.reject(vaultPath, feature, type, message)
     setLoading(false)
     setRejectMode(false)
     setMessage('')
-    onActionComplete()
+    onActionComplete(result)
   }
 
   return (

@@ -13,6 +13,7 @@ const api: ChuckleAPI = {
     status: (vaultPath) => ipcRenderer.invoke('vault:status', { vaultPath }),
     push: (vaultPath) => ipcRenderer.invoke('vault:push', { vaultPath }),
     publishBranch: (vaultPath) => ipcRenderer.invoke('vault:publish-branch', { vaultPath }),
+    author: (vaultPath) => ipcRenderer.invoke('vault:author', { vaultPath }),
   },
   features: {
     list: (vaultPath) => ipcRenderer.invoke('features:list', { vaultPath }),
@@ -32,6 +33,7 @@ const api: ChuckleAPI = {
   workflows: {
     read: (vaultPath) => ipcRenderer.invoke('workflows:read', { vaultPath }),
   },
+  openExternal: (url) => ipcRenderer.invoke('app:open-external', { url }),
 }
 
 contextBridge.exposeInMainWorld('chuckle', api)

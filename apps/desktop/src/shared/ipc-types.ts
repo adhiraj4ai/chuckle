@@ -51,10 +51,11 @@ export interface ReviewResult {
 
 export type IpcChannels =
   | 'vault:list' | 'vault:create' | 'vault:open-existing' | 'vault:select-directory' | 'vault:sync' | 'vault:get-remote'
-  | 'vault:log' | 'vault:status' | 'vault:push' | 'vault:publish-branch'
+  | 'vault:log' | 'vault:status' | 'vault:push' | 'vault:publish-branch' | 'vault:author'
   | 'features:list'
   | 'document:read' | 'document:write' | 'document:get-approval' | 'document:approve' | 'document:reject'
   | 'workflows:read'
+  | 'app:open-external'
 
 export interface ChuckleAPI {
   vault: {
@@ -68,6 +69,7 @@ export interface ChuckleAPI {
     status(vaultPath: string): Promise<GitStatus>
     push(vaultPath: string): Promise<{ ok: boolean; error?: string }>
     publishBranch(vaultPath: string): Promise<{ ok: boolean; error?: string }>
+    author(vaultPath: string): Promise<{ name: string; email: string }>
   }
   features: {
     list(vaultPath: string): Promise<FeatureEntry[]>
@@ -82,6 +84,7 @@ export interface ChuckleAPI {
   workflows: {
     read(vaultPath: string): Promise<VaultWorkflows>
   }
+  openExternal(url: string): Promise<void>
 }
 
 // Augment Window so renderer TypeScript knows about window.chuckle
