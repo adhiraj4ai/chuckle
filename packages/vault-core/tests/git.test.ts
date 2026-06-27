@@ -64,3 +64,27 @@ describe("stageAndCommit", () => {
     expect(head).toBe(sha);
   });
 });
+
+describe("initVaultRepo inside a parent repo", () => {
+  it("creates a nested repo even when the dir is inside another git repo", async () => {
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const os = await import("node:os");
+    const { simpleGit } = await import("simple-git");
+    const { initVaultRepo } = await import("../src/git.js");
+
+    const parent = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-parent-"));
+    await simpleGit(parent).init();
+    await fs.writeFile(path.join(parent, ".gitignore"), ".chuckle/\n");
+    const vaultDir = path.join(parent, ".chuckle");
+    await fs.mkdir(vaultDir, { recursive: true });
+
+    await initVaultRepo(vaultDir);
+
+    // the vault must be its OWN repo root, not the parent
+    const stat = await fs.stat(path.join(vaultDir, ".git"));
+    expect(stat.isDirectory()).toBe(true);
+
+    await fs.rm(parent, { recursive: true, force: true });
+  });
+});
