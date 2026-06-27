@@ -1,36 +1,30 @@
 import path from "node:path";
 import {
-  getApprovalStatus,
-  readActiveFeature,
-  readWorkflows,
-  getWorkflowForType,
-  type DocumentType,
+  getApprovalStatus, readActiveFeature, readWorkflows, getWorkflowForType,
+  readManifest, getFeatureDoc, manifestFeatureNames, type DocumentType,
 } from "@chuckle/vault-core";
+import fs from "node:fs/promises";
 import type { PreToolUseEvent, GateDecision } from "./types.js";
 
-const SPECS_DIR = "docs/superpowers/specs";
-const PLANS_DIR = "docs/superpowers/plans";
 const CHUCKLE_DIR = ".signoff";
 
 function isUnder(rel: string, base: string): boolean {
   return rel === base || rel.startsWith(base + "/");
 }
-
 function targetPath(event: PreToolUseEvent): string | null {
   return event.tool_input.file_path ?? event.tool_input.notebook_path ?? null;
 }
-
-// Best-effort: only decorates the block message; never affects the allow/block decision.
-async function requiredApprovers(
-  vaultPath: string,
-  type: DocumentType
-): Promise<string[]> {
+function classifyDoc(rel: string): DocumentType {
+  const p = rel.toLowerCase();
+  if (/(^|\/)plans?(\/|$)/.test(p) || /plan/.test(path.basename(p))) return "plan";
+  return "spec";
+}
+async function readDocRoots(vaultPath: string): Promise<string[]> {
   try {
-    const workflows = await readWorkflows(vaultPath);
-    return getWorkflowForType(workflows, type).required_approvers;
-  } catch {
-    return [];
-  }
+    const cfg = JSON.parse(await fs.readFile(path.join(vaultPath, "config.json"), "utf-8"));
+    if (Array.isArray(cfg.doc_roots) && cfg.doc_roots.length) return cfg.doc_roots;
+  } catch { /* default */ }
+  return ["docs", ".superpowers"];
 }
 
 export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision> {
@@ -38,48 +32,49 @@ export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision
     const target = targetPath(event);
     if (!target) return { allow: true };
 
-    const abs = path.resolve(event.cwd, target);
-    const rel = path.relative(event.cwd, abs);
+    const vaultPath = path.join(event.cwd, CHUCKLE_DIR);
+    const rel = path.relative(event.cwd, path.resolve(event.cwd, target)).split(path.sep).join("/");
 
-    // Rule 1: spec authoring is always allowed (the entry point).
-    if (isUnder(rel, SPECS_DIR)) return { allow: true };
-    // Rule 2: the .chuckle pointer itself is always allowed.
     if (isUnder(rel, CHUCKLE_DIR)) return { allow: true };
 
-    // Rule 3 (plan docs) vs Rule 4 (code): plan-doc writes gate on spec approval;
-    // everything else (code, config, etc.) gates on plan approval.
-    const type: DocumentType = isUnder(rel, PLANS_DIR) ? "spec" : "plan";
+    const [manifest, docRoots] = await Promise.all([readManifest(vaultPath), readDocRoots(vaultPath)]);
 
-    // Rule 5: no active feature → block.
-    const pointer = await readActiveFeature(event.cwd);
-    if (!pointer) {
-      return {
-        allow: false,
-        reason:
-          "🔒 Chuckle: no active feature. Publish a spec first " +
-          "(publish_document) before making changes.",
-      };
+    // Find a feature whose registered plan/spec path equals rel.
+    const featureFor = (type: DocumentType): string | null =>
+      manifestFeatureNames(manifest).find((f) => getFeatureDoc(manifest, f, type) === rel) ?? null;
+
+    const underDocRoot = docRoots.some((r) => isUnder(rel, r));
+
+    // Spec authoring is the entry point: registered spec OR a new spec-classified file under a doc root.
+    if (featureFor("spec") || (underDocRoot && classifyDoc(rel) === "spec")) return { allow: true };
+
+    // Registered plan doc → gate on that feature's spec approval.
+    const planFeature = featureFor("plan");
+    if (planFeature) {
+      const status = await getApprovalStatus(vaultPath, planFeature, "spec");
+      if (status.status === "approved") return { allow: true };
+      return { allow: false, reason: `🔒 Signoff: plan authoring for "${planFeature}" is gated on spec approval (spec status: ${status.status}).` };
     }
 
-    const status = await getApprovalStatus(pointer.vaultPath, pointer.feature, type);
+    // A new plan-classified file under a doc root with no registration yet → allow authoring
+    // (it becomes registered on submit; spec-gating applies once registered).
+    if (underDocRoot && classifyDoc(rel) === "plan") return { allow: true };
+
+    // Otherwise this is code: gate on the active feature's plan approval.
+    const pointer = await readActiveFeature(event.cwd);
+    if (!pointer) {
+      return { allow: false, reason: "🔒 Signoff: no active feature. Submit a spec first before making code changes." };
+    }
+    const status = await getApprovalStatus(pointer.vaultPath, pointer.feature, "plan");
     if (status.status === "approved") return { allow: true };
 
-    const approvers = await requiredApprovers(pointer.vaultPath, type);
-    const who = approvers.length ? `\nAwaiting approval from: ${approvers.join(", ")}` : "";
-    const gated = type === "spec" ? "plan authoring" : "code changes";
-    return {
-      allow: false,
-      reason:
-        `🔒 Chuckle: ${gated} are gated.\n` +
-        `Feature "${pointer.feature}" — ${type} status: ${status.status}.${who}`,
-    };
+    let who = "";
+    try {
+      const wf = getWorkflowForType(await readWorkflows(pointer.vaultPath), "plan");
+      if (wf.required_approvers.length) who = `\nAwaiting approval from: ${wf.required_approvers.join(", ")}`;
+    } catch { /* decorative only */ }
+    return { allow: false, reason: `🔒 Signoff: code changes are gated.\nFeature "${pointer.feature}" — plan status: ${status.status}.${who}` };
   } catch (err) {
-    // Fail closed: any unexpected error (malformed pointer, unreadable vault) blocks.
-    return {
-      allow: false,
-      reason: `🔒 Chuckle: approval gate could not verify status (${
-        err instanceof Error ? err.message : String(err)
-      }). Blocking by default.`,
-    };
+    return { allow: false, reason: `🔒 Signoff: approval gate could not verify status (${err instanceof Error ? err.message : String(err)}). Blocking by default.` };
   }
 }

@@ -56,7 +56,7 @@ describe("chuckle-gate CLI", () => {
     });
     const { code, stderr } = await run(event);
     expect(code).toBe(2);
-    expect(stderr).toMatch(/Chuckle/);
+    expect(stderr).toMatch(/Signoff/);
   });
 
   it("exits 2 on malformed stdin (fail closed)", async () => {
