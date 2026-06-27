@@ -33,7 +33,7 @@ describe("handlePublish", () => {
 
     expect(result.vault_path).toBe(vaultPath);
     expect(result.document_path).toBe(
-      path.join(vaultPath, "features", "user-auth", "spec.md")
+      path.join(vaultPath, "specs", "user-auth.md")
     );
     expect(result.commit_sha).toMatch(/^[0-9a-f]{40}$/);
 
@@ -48,7 +48,7 @@ describe("handlePublish", () => {
     });
 
     expect(result.document_path).toBe(
-      path.join(vaultPath, "features", "user-auth", "spec.md")
+      path.join(vaultPath, "specs", "user-auth.md")
     );
   });
 

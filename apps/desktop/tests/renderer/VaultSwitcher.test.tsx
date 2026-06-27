@@ -42,8 +42,7 @@ describe('VaultSwitcher', () => {
     vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/new/path')
     vi.mocked(window.chuckle.vault.create).mockResolvedValue({
       name: 'new-vault',
-      org: 'test-org',
-      created_at: '2026-06-27T00:00:00Z',
+      path: '/new/path/.chuckle',
     })
     vi.mocked(window.chuckle.vault.list).mockResolvedValueOnce([]).mockResolvedValue([
       { name: 'new-vault', path: '/new/path', last_opened: '2026-06-27T00:00:00Z' },
@@ -66,8 +65,7 @@ describe('VaultSwitcher', () => {
     vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/existing/vault')
     vi.mocked(window.chuckle.vault.openExisting).mockResolvedValue({
       name: 'existing',
-      org: 'org',
-      created_at: '2026-06-27T00:00:00Z',
+      path: '/existing/vault',
     })
     const onSelected = vi.fn()
     render(<VaultSwitcher onVaultSelected={onSelected} />)

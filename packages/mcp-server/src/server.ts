@@ -4,6 +4,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { handlePublish } from "./tools/publish.js";
+import { handleSubmit } from "./tools/submit.js";
 import { handleCheck } from "./tools/check.js";
 import { handleList } from "./tools/list.js";
 
@@ -38,6 +39,26 @@ export function createServer(vaultPath: string): Server {
             },
           },
           required: ["source_path", "document_type"],
+        },
+      },
+      {
+        name: "submit_for_review",
+        description:
+          "Submit a spec/plan that already lives in the vault (specs/ or plans/) for review — records the submission and commits, without copying.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            feature_name: {
+              type: "string",
+              description: "Feature name (e.g. 'user-auth')",
+            },
+            document_type: {
+              type: "string",
+              enum: ["spec", "plan"],
+              description: "Document type — spec or plan",
+            },
+          },
+          required: ["feature_name", "document_type"],
         },
       },
       {
@@ -80,6 +101,8 @@ export function createServer(vaultPath: string): Server {
 
       if (name === "publish_document") {
         result = await handlePublish(vaultPath, args);
+      } else if (name === "submit_for_review") {
+        result = await handleSubmit(vaultPath, args);
       } else if (name === "check_approval") {
         result = await handleCheck(vaultPath, args);
       } else if (name === "list_pending") {

@@ -8,7 +8,6 @@ let tmpDir: string;
 
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-test-"));
-  await fs.mkdir(path.join(tmpDir, ".chuckle"), { recursive: true });
 });
 
 afterEach(async () => {
@@ -30,7 +29,7 @@ const sampleWorkflows = {
 describe("readWorkflows", () => {
   it("reads and parses workflows.json", async () => {
     await fs.writeFile(
-      path.join(tmpDir, ".chuckle", "workflows.json"),
+      path.join(tmpDir, "workflows.json"),
       JSON.stringify(sampleWorkflows)
     );
     const result = await readWorkflows(tmpDir);

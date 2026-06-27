@@ -17,6 +17,14 @@ export type {
 // Feature inference
 export { inferFeatureName } from "./feature.js";
 
+// Vault layout (docs-as-vault: specs/ plans/ approvals/)
+export {
+  documentPath,
+  documentRelPath,
+  approvalRelPath,
+  listFeatureNames,
+} from "./layout.js";
+
 // Workflow
 export { readWorkflows, getWorkflowForType } from "./workflow.js";
 
@@ -44,3 +52,6 @@ export {
 
 // VaultManager
 export { VaultManager } from "./vault.js";
+
+// Migration (legacy features/ layout -> docs-as-vault)
+export { migrateVault } from "./migrate.js";

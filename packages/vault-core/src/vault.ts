@@ -10,6 +10,7 @@ import type {
 } from "./types.js";
 import { initVaultRepo, stageAndCommit } from "./git.js";
 import { writeApproval, readApproval } from "./approval.js";
+import { documentPath, documentRelPath, approvalRelPath } from "./layout.js";
 
 const DEFAULT_WORKFLOWS = {
   spec: {
@@ -48,8 +49,9 @@ export class VaultManager {
   }
 
   static async create(vaultPath: string, name: string, org: string): Promise<VaultManager> {
-    await fs.mkdir(path.join(vaultPath, ".chuckle"), { recursive: true });
-    await fs.mkdir(path.join(vaultPath, "features"), { recursive: true });
+    await fs.mkdir(path.join(vaultPath, "specs"), { recursive: true });
+    await fs.mkdir(path.join(vaultPath, "plans"), { recursive: true });
+    await fs.mkdir(path.join(vaultPath, "approvals"), { recursive: true });
 
     const config: VaultConfig = {
       name,
@@ -57,13 +59,15 @@ export class VaultManager {
       created_at: new Date().toISOString(),
     };
 
+    // config + workflows live at the vault root (the vault dir is the project's
+    // .chuckle/ directory).
     await fs.writeFile(
-      path.join(vaultPath, ".chuckle", "config.json"),
+      path.join(vaultPath, "config.json"),
       JSON.stringify(config, null, 2) + "\n"
     );
 
     await fs.writeFile(
-      path.join(vaultPath, ".chuckle", "workflows.json"),
+      path.join(vaultPath, "workflows.json"),
       JSON.stringify(DEFAULT_WORKFLOWS, null, 2) + "\n"
     );
 
@@ -76,7 +80,7 @@ export class VaultManager {
 
     await stageAndCommit(
       vaultPath,
-      [".chuckle/config.json", ".chuckle/workflows.json", "README.md"],
+      ["config.json", "workflows.json", "README.md"],
       "chore: initialize vault scaffold",
       "chuckle@local",
       "Chuckle"
@@ -86,13 +90,13 @@ export class VaultManager {
   }
 
   static async open(vaultPath: string): Promise<VaultManager> {
-    const configPath = path.join(vaultPath, ".chuckle", "config.json");
+    const configPath = path.join(vaultPath, "config.json");
     try {
       const raw = await fs.readFile(configPath, "utf-8");
       const config = JSON.parse(raw) as VaultConfig;
       return new VaultManager(vaultPath, config);
     } catch {
-      throw new Error(`${vaultPath} is not a Chuckle vault (missing .chuckle/config.json)`);
+      throw new Error(`${vaultPath} is not a Chuckle vault (missing config.json)`);
     }
   }
 
@@ -103,15 +107,47 @@ export class VaultManager {
     authorEmail: string,
     authorName: string
   ): Promise<PublishResult> {
-    const featureDir = path.join(this._vaultPath, "features", featureName);
-    await fs.mkdir(featureDir, { recursive: true });
+    const destFile = documentPath(this._vaultPath, featureName, type);
+    await fs.mkdir(path.dirname(destFile), { recursive: true });
+    // copy only when publishing from an external source (no-op if already in place)
+    if (path.resolve(sourcePath) !== path.resolve(destFile)) {
+      await fs.copyFile(sourcePath, destFile);
+    }
 
-    const destFile = path.join(featureDir, `${type}.md`);
-    await fs.copyFile(sourcePath, destFile);
+    const sha = await this.recordSubmission(featureName, type, authorEmail, authorName);
+    return {
+      vault_path: this._vaultPath,
+      document_path: destFile,
+      commit_sha: sha,
+    };
+  }
 
+  /**
+   * Submit a document that already lives in the vault (specs/ or plans/) for
+   * review — no copy. Creates/updates the approval record and commits.
+   */
+  async submitForReview(
+    featureName: string,
+    type: DocumentType,
+    authorEmail: string,
+    authorName: string
+  ): Promise<PublishResult> {
+    const sha = await this.recordSubmission(featureName, type, authorEmail, authorName);
+    return {
+      vault_path: this._vaultPath,
+      document_path: documentPath(this._vaultPath, featureName, type),
+      commit_sha: sha,
+    };
+  }
+
+  private async recordSubmission(
+    featureName: string,
+    type: DocumentType,
+    authorEmail: string,
+    authorName: string
+  ): Promise<string> {
     const existing = await readApproval(this._vaultPath, featureName, type);
     const now = new Date().toISOString();
-    const action = existing ? "resubmitted" : "submitted";
 
     const record = existing
       ? {
@@ -119,7 +155,7 @@ export class VaultManager {
           status: "pending" as const,
           history: [
             ...existing.history,
-            { action: action as "resubmitted", by: authorEmail, at: now, message: null },
+            { action: "resubmitted" as const, by: authorEmail, at: now, message: null },
           ],
         }
       : {
@@ -133,22 +169,13 @@ export class VaultManager {
 
     await writeApproval(this._vaultPath, record);
 
-    const approvalFile = path.join("features", featureName, `${type}.approval.json`);
-    const docFile = path.join("features", featureName, `${type}.md`);
-
-    const sha = await stageAndCommit(
+    return stageAndCommit(
       this._vaultPath,
-      [docFile, approvalFile],
-      `chore: publish ${featureName}/${type} for review`,
+      [documentRelPath(featureName, type), approvalRelPath(featureName, type)],
+      `chore: submit ${featureName}/${type} for review`,
       authorEmail,
       authorName
     );
-
-    return {
-      vault_path: this._vaultPath,
-      document_path: destFile,
-      commit_sha: sha,
-    };
   }
 
   static async listVaults(): Promise<VaultInfo[]> {

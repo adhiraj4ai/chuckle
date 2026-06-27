@@ -13,7 +13,7 @@ export function approvalFilePath(
   feature: string,
   type: DocumentType
 ): string {
-  return path.join(vaultPath, "features", feature, `${type}.approval.json`);
+  return path.join(vaultPath, "approvals", `${feature}.${type}.json`);
 }
 
 export async function readApproval(

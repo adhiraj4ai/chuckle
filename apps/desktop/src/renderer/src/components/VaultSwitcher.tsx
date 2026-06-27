@@ -20,15 +20,15 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
   async function handleOpenVault(): Promise<void> {
     const dir = await window.chuckle.vault.selectDirectory()
     if (!dir) return
-    const config = await window.chuckle.vault.openExisting(dir)
-    onVaultSelected(dir, config.name)
+    const vault = await window.chuckle.vault.openExisting(dir)
+    onVaultSelected(vault.path, vault.name)
   }
 
   async function handleCreateVault(): Promise<void> {
     const dir = await window.chuckle.vault.selectDirectory()
     if (!dir) return
-    await window.chuckle.vault.create(dir, newName, newOrg)
-    onVaultSelected(dir, newName)
+    const vault = await window.chuckle.vault.create(dir, newName, newOrg)
+    onVaultSelected(vault.path, vault.name)
     setModal('none')
   }
 

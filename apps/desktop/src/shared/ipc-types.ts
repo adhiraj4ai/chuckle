@@ -26,6 +26,13 @@ export interface FeatureEntry {
   plan: ApprovalStatus | 'not_found'
 }
 
+/** Result of creating/opening a vault: the vault's display name and the
+ *  resolved vault directory (the project's .chuckle/). */
+export interface VaultOpenResult {
+  name: string
+  path: string
+}
+
 export interface GitCommit {
   hash: string
   short: string
@@ -60,8 +67,8 @@ export type IpcChannels =
 export interface ChuckleAPI {
   vault: {
     list(): Promise<VaultInfo[]>
-    create(path: string, name: string, org: string): Promise<VaultConfig>
-    openExisting(path: string): Promise<VaultConfig>
+    create(projectRoot: string, name: string, org: string): Promise<VaultOpenResult>
+    openExisting(path: string): Promise<VaultOpenResult>
     selectDirectory(): Promise<string | null>
     sync(vaultPath: string): Promise<void>
     getRemote(vaultPath: string): Promise<string | null>

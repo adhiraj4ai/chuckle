@@ -15,7 +15,7 @@ let tmpDir: string;
 
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-approval-"));
-  await fs.mkdir(path.join(tmpDir, "features", "user-auth"), { recursive: true });
+  await fs.mkdir(path.join(tmpDir, "approvals"), { recursive: true });
 });
 
 afterEach(async () => {
@@ -36,12 +36,12 @@ const baseRecord: ApprovalRecord = {
 describe("approvalFilePath", () => {
   it("returns correct path for spec", () => {
     const p = approvalFilePath(tmpDir, "user-auth", "spec");
-    expect(p).toBe(path.join(tmpDir, "features", "user-auth", "spec.approval.json"));
+    expect(p).toBe(path.join(tmpDir, "approvals", "user-auth.spec.json"));
   });
 
   it("returns correct path for plan", () => {
     const p = approvalFilePath(tmpDir, "user-auth", "plan");
-    expect(p).toBe(path.join(tmpDir, "features", "user-auth", "plan.approval.json"));
+    expect(p).toBe(path.join(tmpDir, "approvals", "user-auth.plan.json"));
   });
 });
 
@@ -53,7 +53,7 @@ describe("readApproval", () => {
 
   it("reads existing approval file", async () => {
     await fs.writeFile(
-      path.join(tmpDir, "features", "user-auth", "spec.approval.json"),
+      path.join(tmpDir, "approvals", "user-auth.spec.json"),
       JSON.stringify(baseRecord)
     );
     const result = await readApproval(tmpDir, "user-auth", "spec");
@@ -66,7 +66,7 @@ describe("writeApproval", () => {
   it("writes approval record as pretty-printed JSON", async () => {
     await writeApproval(tmpDir, baseRecord);
     const raw = await fs.readFile(
-      path.join(tmpDir, "features", "user-auth", "spec.approval.json"),
+      path.join(tmpDir, "approvals", "user-auth.spec.json"),
       "utf-8"
     );
     const parsed = JSON.parse(raw);
