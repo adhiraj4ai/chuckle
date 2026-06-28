@@ -259,6 +259,21 @@ describe('reviewAction', () => {
     await seedDoc('user-auth', 'spec')
     await expect(reviewAction(vaultPath, 'user-auth', 'spec', 'approve')).rejects.toThrow()
   })
+
+  it('reviewAction passes the message through to the history entry', async () => {
+    await seedDoc('user-auth', 'spec')
+    await reviewAction(vaultPath, 'user-auth', 'spec', 'start_review')
+    await reviewAction(vaultPath, 'user-auth', 'spec', 'approve', 'LGTM')
+    const record = await getDocumentApproval(vaultPath, 'user-auth', 'spec')
+    expect(record?.history.at(-1)?.message).toBe('LGTM')
+  })
+
+  it('reviewAction start_review with no message leaves message: null on history entry', async () => {
+    await seedDoc('user-auth', 'spec')
+    await reviewAction(vaultPath, 'user-auth', 'spec', 'start_review')
+    const record = await getDocumentApproval(vaultPath, 'user-auth', 'spec')
+    expect(record?.history.at(-1)?.message).toBeNull()
+  })
 })
 
 describe('comments', () => {

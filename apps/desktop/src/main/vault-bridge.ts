@@ -229,7 +229,11 @@ export async function writeDocument(
 }
 
 export async function reviewAction(
-  vaultPath: string, feature: string, type: DocumentType, action: ReviewAction
+  vaultPath: string,
+  feature: string,
+  type: DocumentType,
+  action: ReviewAction,
+  message?: string | null
 ): Promise<ReviewResult> {
   const record = await readApproval(vaultPath, feature, type)
   if (!record) throw new Error(`no approval record for ${feature}/${type}`)
@@ -244,7 +248,7 @@ export async function reviewAction(
   let hash: string | undefined
   try { hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { hash = undefined }
   const now = new Date().toISOString()
-  let updated = applyReviewerAction(record, email, action, now, hash)
+  let updated = applyReviewerAction(record, email, action, now, hash, message ?? null)
   updated = { ...updated, status: deriveStatus(updated, required, hash ?? null) }
   await writeApproval(vaultPath, updated)
   await stageAndCommit(vaultPath, [approvalRelPath(feature, type)], `review: ${action} ${feature}/${type} by ${email}`, email, name)
