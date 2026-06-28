@@ -30,8 +30,8 @@ const api: ChuckleAPI = {
       ipcRenderer.invoke('document:is-stale', { vaultPath, feature, type }),
   },
   review: {
-    action: (vaultPath, feature, type, action) =>
-      ipcRenderer.invoke('review:action', { vaultPath, feature, type, action }),
+    action: (vaultPath, feature, type, action, message) =>
+      ipcRenderer.invoke('review:action', { vaultPath, feature, type, action, message }),
   },
   comments: {
     read: (vaultPath, feature, type) =>

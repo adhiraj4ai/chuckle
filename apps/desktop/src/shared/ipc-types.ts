@@ -102,7 +102,7 @@ export interface ChuckleAPI {
     isStale(vaultPath: string, feature: string, type: DocumentType): Promise<boolean>
   }
   review: {
-    action(vaultPath: string, feature: string, type: DocumentType, action: ReviewAction): Promise<ReviewResult>
+    action(vaultPath: string, feature: string, type: DocumentType, action: ReviewAction, message?: string | null): Promise<ReviewResult>
   }
   comments: {
     read(vaultPath: string, feature: string, type: DocumentType): Promise<CommentsFile>
