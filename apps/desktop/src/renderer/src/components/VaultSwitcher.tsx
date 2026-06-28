@@ -133,7 +133,7 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
             className="text-[42px] leading-none text-fg pr-1"
             style={{ fontFamily: "'SignPainter', 'SignPainter-HouseScript', 'Brush Script MT', cursive", fontWeight: 700 }}
           >
-            Signoff
+            SignOff
           </h1>
         </div>
         <p className="text-fg/50 text-[14px] mb-8 pl-0.5">

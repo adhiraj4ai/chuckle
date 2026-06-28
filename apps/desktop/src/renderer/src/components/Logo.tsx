@@ -6,8 +6,8 @@ interface Props {
 }
 
 /**
- * Signoff mark — a checkmark (approved) finishing in a signature flourish
- * (signed off), on an iris tile. Self-contained SVG; works on light or dark.
+ * SignOff mark — a white checkmark (approved) finishing in a yellow signature
+ * flourish (signed off), on a blue tile. Self-contained SVG; light or dark.
  */
 export function Logo({ size = 28, className = '' }: Props): React.ReactElement {
   const id = 'signoff-grad'
@@ -22,8 +22,8 @@ export function Logo({ size = 28, className = '' }: Props): React.ReactElement {
     >
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#6d68e6" />
-          <stop offset="1" stopColor="#4b47bd" />
+          <stop offset="0" stopColor="#1e40af" />
+          <stop offset="1" stopColor="#102356" />
         </linearGradient>
       </defs>
       <rect width="32" height="32" rx="8" fill={`url(#${id})`} />
@@ -40,9 +40,8 @@ export function Logo({ size = 28, className = '' }: Props): React.ReactElement {
       <path
         d="M8 24.5c4.5 1.8 11 1.4 16-1.2"
         fill="none"
-        stroke="#ffffff"
-        strokeOpacity="0.5"
-        strokeWidth="1.8"
+        stroke="#facc15"
+        strokeWidth="2"
         strokeLinecap="round"
       />
     </svg>

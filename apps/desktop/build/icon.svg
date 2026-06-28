@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Signoff">
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="SignOff">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#6d68e6"/>
-      <stop offset="1" stop-color="#4b47bd"/>
+      <stop offset="0" stop-color="#1e40af"/>
+      <stop offset="1" stop-color="#102356"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="114" fill="url(#g)"/>
   <path d="M150 268l74 74L366 178" fill="none" stroke="#ffffff" stroke-width="46"
         stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M132 392c74 30 178 22 256-20" fill="none" stroke="#ffffff" stroke-opacity="0.5"
-        stroke-width="26" stroke-linecap="round"/>
+  <path d="M132 392c74 30 178 22 256-20" fill="none" stroke="#facc15"
+        stroke-width="28" stroke-linecap="round"/>
 </svg>

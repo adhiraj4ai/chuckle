@@ -16,7 +16,7 @@
   },
   "build": {
     "appId": "com.denzing.signoff",
-    "productName": "Signoff",
+    "productName": "SignOff",
     "electronVersion": "34.5.8",
     "directories": {
       "output": "release",
