@@ -24,7 +24,7 @@ async function readDocRoots(vaultPath: string): Promise<string[]> {
     const cfg = JSON.parse(await fs.readFile(path.join(vaultPath, "config.json"), "utf-8"));
     if (Array.isArray(cfg.doc_roots) && cfg.doc_roots.length) return cfg.doc_roots;
   } catch { /* default */ }
-  return ["docs", ".superpowers"];
+  return ["docs"];
 }
 
 export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision> {

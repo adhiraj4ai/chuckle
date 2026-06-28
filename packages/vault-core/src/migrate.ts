@@ -134,7 +134,7 @@ export async function migrateToIndex(
   }
 
   const projectRoot = projectRootOf(vaultPath);
-  let docRoots = ["docs", ".superpowers"];
+  let docRoots = ["docs"];
   try {
     const cfg = JSON.parse(await fs.readFile(path.join(vaultPath, "config.json"), "utf-8"));
     if (Array.isArray(cfg.doc_roots) && cfg.doc_roots.length) docRoots = cfg.doc_roots;

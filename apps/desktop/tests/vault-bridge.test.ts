@@ -189,20 +189,23 @@ describe('git sync of review decisions', () => {
 })
 
 describe('createVault doc auto-detection', () => {
-  it('registers markdown from docs/ and .superpowers/ in the manifest (no copies)', async () => {
+  it('registers markdown from docs/ only in the manifest (no copies); ignores .superpowers/', async () => {
     const projectRoot = path.join(tmpDir, 'proj')
     await fs.mkdir(path.join(projectRoot, 'docs', 'specs'), { recursive: true })
     await fs.mkdir(path.join(projectRoot, 'docs', 'plans'), { recursive: true })
     await fs.mkdir(path.join(projectRoot, '.superpowers', 'specs'), { recursive: true })
     await fs.writeFile(path.join(projectRoot, 'docs', 'specs', '2026-06-27-user-auth-design.md'), '# Auth\n')
     await fs.writeFile(path.join(projectRoot, 'docs', 'plans', '2026-06-27-user-auth.md'), '# Auth plan\n')
+    // This file lives under .superpowers/ — it must NOT be registered by default
     await fs.writeFile(path.join(projectRoot, '.superpowers', 'specs', '2026-06-27-billing-design.md'), '# Billing\n')
 
     const result = await createVault(projectRoot, 'proj')
 
     const features = await listFeatures(result.path)
     const names = features.map((f) => f.name).sort()
-    expect(names).toEqual(['billing', 'user-auth'])
+    // Only docs/ is scanned — billing (from .superpowers/) must not appear
+    expect(names).toEqual(['user-auth'])
+    expect(names).not.toContain('billing')
     const userAuth = features.find((f) => f.name === 'user-auth')!
     expect(userAuth.spec).toBe('pending')
     expect(userAuth.plan).toBe('pending')

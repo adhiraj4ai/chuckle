@@ -64,7 +64,7 @@ export class VaultManager {
     const config: VaultConfig = {
       name,
       created_at: new Date().toISOString(),
-      doc_roots: ["docs", ".superpowers"],
+      doc_roots: ["docs"],
       ...(org ? { org } : {}),
     };
 

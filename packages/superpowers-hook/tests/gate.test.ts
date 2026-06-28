@@ -89,9 +89,16 @@ describe("evaluateGate", () => {
     expect(decision.allow).toBe(true);
   });
 
-  it("allows authoring a spec under the .superpowers doc root", async () => {
-    const decision = await evaluateGate(writeEvent(".superpowers/specs/2026-06-27-bar-design.md"));
+  it("allows authoring a spec under docs/ doc root", async () => {
+    // "docs" is the only default doc_root; a new spec-classified file under it is allowed.
+    const decision = await evaluateGate(writeEvent("docs/specs/2026-06-27-bar-design.md"));
     expect(decision.allow).toBe(true);
+  });
+
+  it("does not auto-allow a spec write under .superpowers/ when no active feature (not a doc root)", async () => {
+    // .superpowers/ is no longer a default doc root — writes there fall through to the code gate.
+    const decision = await evaluateGate(writeEvent(".superpowers/specs/2026-06-27-bar-design.md"));
+    expect(decision.allow).toBe(false);
   });
 
   it("allows writes to a registered spec doc", async () => {
@@ -202,7 +209,7 @@ describe("evaluateGate", () => {
 
   // --- Doc root boundary ---------------------------------------------------
 
-  it("blocks writes outside doc roots when no active feature (not under docs or .superpowers)", async () => {
+  it("blocks writes outside doc roots when no active feature (not under docs)", async () => {
     // e.g. "src/README.md" is not under a doc root and not a registered doc
     const decision = await evaluateGate(writeEvent("src/README.md"));
     expect(decision.allow).toBe(false);

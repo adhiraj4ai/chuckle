@@ -32,7 +32,7 @@ describe("VaultManager.create", () => {
     await expect(fs.stat(path.join(vaultPath, "specs"))).rejects.toMatchObject({ code: "ENOENT" });
     await expect(fs.stat(path.join(vaultPath, "plans"))).rejects.toMatchObject({ code: "ENOENT" });
     const config = JSON.parse(await fs.readFile(path.join(vaultPath, "config.json"), "utf-8"));
-    expect(config.doc_roots).toEqual(["docs", ".superpowers"]);
+    expect(config.doc_roots).toEqual(["docs"]);
   });
 
   it("writes config.json with name and org", async () => {
@@ -41,7 +41,7 @@ describe("VaultManager.create", () => {
     const config = JSON.parse(raw);
     expect(config.name).toBe("test-project");
     expect(config.org).toBe("acme");
-    expect(config.doc_roots).toEqual(["docs", ".superpowers"]);
+    expect(config.doc_roots).toEqual(["docs"]);
   });
 
   it("writes default workflows.json", async () => {
