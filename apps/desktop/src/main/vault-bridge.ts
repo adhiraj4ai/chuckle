@@ -181,21 +181,21 @@ export async function createVault(
   } catch {
     /* ignore — vault is created; docs can be added later */
   }
+  // Write approvers to workflows before registering, so a registered vault always
+  // reflects the requested approvers. A failed approver write rejects without
+  // registering; the .signoff dir on disk can be opened/retried later.
+  const clean = [...new Set((approvers ?? []).map((a) => a.trim()).filter(Boolean))]
+  if (clean.length) {
+    const workflows = await readWorkflows(vaultDir)
+    workflows.spec.required_approvers = clean
+    workflows.plan.required_approvers = clean
+    await writeVaultWorkflows(vaultDir, workflows)
+  }
   await VaultManager.registerVault({
     name: manager.config.name,
     path: vaultDir,
     last_opened: new Date().toISOString(),
   })
-  // Write approvers to workflows after doc import (outside try/catch so errors surface)
-  if (approvers && approvers.length > 0) {
-    const clean = [...new Set(approvers.map(a => a.trim()).filter(Boolean))]
-    if (clean.length > 0) {
-      const workflows = await readWorkflows(vaultDir)
-      workflows.spec.required_approvers = clean
-      workflows.plan.required_approvers = clean
-      await writeVaultWorkflows(vaultDir, workflows)
-    }
-  }
   return { name: manager.config.name, path: vaultDir }
 }
 

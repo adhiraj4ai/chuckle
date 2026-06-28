@@ -101,6 +101,26 @@ describe('VaultSwitcher', () => {
     expect(screen.getByText(/2 of 5/i)).toBeInTheDocument()
   })
 
+  it('ignores a second Create click while setup is in flight', async () => {
+    vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
+    vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/new/path')
+    // create never resolves, so the first invocation stays in flight
+    vi.mocked(window.chuckle.vault.create).mockImplementation(
+      () => new Promise(() => { /* never resolves */ })
+    )
+    vi.mocked(window.chuckle.vault.onSetupProgress).mockReturnValue(() => {})
+    render(<VaultSwitcher onVaultSelected={() => {}} />)
+    await waitFor(() => screen.getByText(/set up in a project/i))
+    fireEvent.click(screen.getByText(/set up in a project/i))
+    await waitFor(() => screen.getByRole('button', { name: /^create$/i }))
+    const createButton = screen.getByRole('button', { name: /^create$/i })
+    // double-click before the busy paint swaps the form for the progress bar
+    fireEvent.click(createButton)
+    fireEvent.click(createButton)
+    await waitFor(() => expect(window.chuckle.vault.create).toHaveBeenCalledTimes(1))
+    expect(window.chuckle.vault.onSetupProgress).toHaveBeenCalledTimes(1)
+  })
+
   it('opens existing vault on "Open"', async () => {
     vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
     vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/existing/vault')

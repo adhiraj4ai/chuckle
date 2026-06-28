@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import type { VaultInfo } from '@shared/ipc-types'
 import { Logo } from './Logo'
 
@@ -19,6 +19,7 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
   const [setupName, setSetupName] = useState('')
   const [setupApprovers, setSetupApprovers] = useState('')
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  const busyRef = useRef(false)
 
   useEffect(() => {
     window.chuckle.vault.list().then(setVaults)
@@ -51,22 +52,26 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
   }
 
   async function handleConfirmSetup(): Promise<void> {
+    if (busyRef.current) return
     if (!setupDir) return
-    if (!setupName.trim()) return
+    const trimmedName = setupName.trim()
+    if (!trimmedName) return
     const parsedApprovers = setupApprovers
       .split(/[,\n]/)
       .map((s) => s.trim())
       .filter(Boolean)
+    busyRef.current = true
     setBusy(true)
     setProgress(null)
-    const unsub = window.chuckle.vault.onSetupProgress((p) => setProgress(p))
+    const unsub = window.chuckle.vault.onSetupProgress((p) => setProgress(p)) ?? (() => {})
     try {
-      const vault = await window.chuckle.vault.create(setupDir, setupName.trim(), parsedApprovers)
+      const vault = await window.chuckle.vault.create(setupDir, trimmedName, parsedApprovers)
       setSetupDir(null)
       onVaultSelected(vault.path, vault.name)
     } catch (e) {
       setError(`Setup failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
+      busyRef.current = false
       unsub()
       setBusy(false)
       setProgress(null)
@@ -157,7 +162,9 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
                   />
                 </div>
                 <p className="text-[12px] text-fg/50 mt-1">
-                  Configuring {progress.done} of {progress.total}…
+                  {progress.done < progress.total
+                    ? `Configuring ${progress.done} of ${progress.total}…`
+                    : 'Finalizing…'}
                 </p>
               </>
             ) : (
