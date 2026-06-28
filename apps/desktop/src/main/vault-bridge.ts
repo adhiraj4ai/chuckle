@@ -147,9 +147,9 @@ async function ensureGitignored(projectRoot: string): Promise<void> {
 }
 
 /** Resolve a user-picked directory to a vault dir: a project root resolves to
- *  its `.signoff/` (or legacy `.chuckle/`); an already-vault dir is used directly. */
+ *  its `.signoff/`; an already-vault dir is used directly. */
 async function resolveVaultDir(selected: string): Promise<string> {
-  for (const name of [VAULT_DIR, '.chuckle']) {
+  for (const name of [VAULT_DIR]) {
     const nested = path.join(selected, name)
     try {
       await fs.access(path.join(nested, 'config.json'))
@@ -168,7 +168,7 @@ function classifyDoc(relPath: string): DocumentType {
   return 'spec'
 }
 
-/** Recursively collect .md files under a directory (ignoring nested .chuckle). */
+/** Recursively collect .md files under a directory (ignoring nested .signoff). */
 async function walkMarkdown(dir: string): Promise<string[]> {
   const out: string[] = []
   let entries: import('node:fs').Dirent[]
@@ -178,7 +178,7 @@ async function walkMarkdown(dir: string): Promise<string[]> {
     return out
   }
   for (const e of entries) {
-    if (e.name === '.signoff' || e.name === '.chuckle' || e.name === '.git' || e.name === 'node_modules') continue
+    if (e.name === '.signoff' || e.name === '.git' || e.name === 'node_modules') continue
     const full = path.join(dir, e.name)
     if (e.isDirectory()) out.push(...(await walkMarkdown(full)))
     else if (e.isFile() && e.name.toLowerCase().endsWith('.md')) out.push(full)

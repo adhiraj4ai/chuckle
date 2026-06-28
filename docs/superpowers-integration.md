@@ -9,7 +9,7 @@ hook in `.claude/settings.json`, your skills behave exactly as before.
 1. `npm install -g @signoff/mcp-server @signoff/superpowers-hook`
 2. Create a vault in the SignOff desktop app and note its absolute path.
 3. Add both the MCP server and the hook to your project's
-   `.claude/settings.json` (see `docs/chuckle-settings-example.json`).
+   `.claude/settings.json` (see `docs/signoff-settings-example.json`).
 
 ## How it works
 
@@ -23,7 +23,7 @@ hook in `.claude/settings.json`, your skills behave exactly as before.
   active. After brainstorming writes a spec, call
   `publish_document(source_path, feature_name, "spec")`. After writing-plans
   writes a plan, call `publish_document(source_path, feature_name, "plan")`.
-  Publishing writes `.chuckle/active-feature.json` in your project, which the
+  Publishing writes `.signoff/active-feature.json` in your project, which the
   hook reads.
 
 If Claude forgets to publish, the hook still blocks code changes — publishing

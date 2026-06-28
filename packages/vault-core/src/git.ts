@@ -67,10 +67,10 @@ function git(vaultPath: string): SimpleGit {
 export async function initVaultRepo(vaultPath: string): Promise<void> {
   const g = simpleGit(vaultPath);
   // IS_REPO_ROOT (not the default IS_REPO_ROOT-or-descendant): when the vault
-  // lives inside a parent repo (e.g. <project>/.chuckle), a plain checkIsRepo()
+  // lives inside a parent repo (e.g. <project>/.signoff), a plain checkIsRepo()
   // returns true for the parent and we'd skip init — leaving the vault without
   // its own .git, so commits would fall through to the parent (which gitignores
-  // .chuckle). Only treat it as initialized if THIS dir is itself a repo root.
+  // .signoff). Only treat it as initialized if THIS dir is itself a repo root.
   const isRepoRoot = await g.checkIsRepo(CheckRepoActions.IS_REPO_ROOT);
   if (!isRepoRoot) {
     await g.init();

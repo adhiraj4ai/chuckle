@@ -41,7 +41,7 @@ export interface FeatureEntry {
 }
 
 /** Result of creating/opening a vault: the vault's display name and the
- *  resolved vault directory (the project's .chuckle/). */
+ *  resolved vault directory (the project's .signoff/). */
 export interface VaultOpenResult {
   name: string
   path: string

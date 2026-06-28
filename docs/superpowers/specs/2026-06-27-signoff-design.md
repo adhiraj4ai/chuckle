@@ -35,15 +35,15 @@ Developer's project repo
   docs/superpowers/specs/*.md
   docs/superpowers/plans/*.md
           │
-          │ Claude Code calls chuckle MCP → publish_document()
+          │ Claude Code calls signoff MCP → publish_document()
           ▼
 SignOff Vault (dedicated git repo, one per project)
   features/<feature-name>/spec.md
   features/<feature-name>/spec.approval.json
   features/<feature-name>/plan.md
   features/<feature-name>/plan.approval.json
-  .chuckle/workflows.json
-  .chuckle/config.json
+  .signoff/workflows.json
+  .signoff/config.json
           │
           ├──────────────────────────────┐
           ▼                              ▼
@@ -60,8 +60,8 @@ The vault git repo is the single source of truth. The desktop app and MCP server
 ## Vault Structure
 
 ```
-chuckle-vault/                        # dedicated git repo per project
-├── .chuckle/
+signoff-vault/                        # dedicated git repo per project
+├── .signoff/
 │   ├── config.json                   # project name, org, created date
 │   └── workflows.json                # approval rules per document type
 ├── features/
@@ -81,7 +81,7 @@ Feature folder names are inferred from the source document filename (e.g. `2026-
 ### Workflow Config
 
 ```json
-// .chuckle/workflows.json
+// .signoff/workflows.json
 {
   "spec": {
     "required_approvers": ["solution-architect@org.com"],
@@ -142,10 +142,10 @@ Every approval action is appended to the sidecar file — records are never over
 
 ## Multi-Vault Management
 
-Each project has its own vault (separate git repo). SignOff manages multiple vaults via a local registry at `~/.chuckle/vaults.json`. The desktop app shows a vault switcher on launch (Obsidian-style).
+Each project has its own vault (separate git repo). SignOff manages multiple vaults via a local registry at `~/.signoff/vaults.json`. The desktop app shows a vault switcher on launch (Obsidian-style).
 
 ```
-~/.chuckle/vaults.json           # registry of all known vaults
+~/.signoff/vaults.json           # registry of all known vaults
 
 ~/project-alpha-vault/           # one git repo per project
 ~/project-beta-vault/
@@ -220,7 +220,7 @@ list_pending() → Array<{ feature: string, type: string, submitted_at: string, 
 // .claude/settings.json
 {
   "mcpServers": {
-    "chuckle": {
+    "signoff": {
       "command": "signoff-mcp",
       "args": ["--vault", "/path/to/project-vault"]
     }
@@ -255,7 +255,7 @@ SignOff integrates at the end of two superpowers skills and at the start of impl
 → If approved: proceeds normally
 ```
 
-**Opt-in only:** If `chuckle` is not present in MCP servers config, skills behave exactly as today. Zero disruption to existing users.
+**Opt-in only:** If `signoff` is not present in MCP servers config, skills behave exactly as today. Zero disruption to existing users.
 
 ---
 
@@ -279,7 +279,7 @@ SignOff integrates at the end of two superpowers skills and at the start of impl
 ## Monorepo Structure
 
 ```
-chuckle/
+signoff/
 ├── apps/
 │   └── desktop/          # Electron app (React + TypeScript + Tailwind)
 ├── packages/

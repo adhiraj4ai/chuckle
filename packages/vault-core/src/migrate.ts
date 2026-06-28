@@ -29,18 +29,18 @@ async function moveIfExists(from: string, to: string): Promise<void> {
 
 /**
  * Migrate a legacy vault to the docs-as-vault layout:
- *   .chuckle/{config,workflows}.json  -> {config,workflows}.json (root)
+ *   .signoff/{config,workflows}.json  -> {config,workflows}.json (root)
  *   features/<f>/<t>.md               -> specs|plans/<f>.md
  *   features/<f>/<t>.approval.json    -> approvals/<f>.<t>.json
  * Idempotent: a no-op on already-migrated vaults.
  */
 export async function migrateVault(vaultPath: string): Promise<void> {
   await moveIfExists(
-    path.join(vaultPath, ".chuckle", "config.json"),
+    path.join(vaultPath, ".signoff", "config.json"),
     path.join(vaultPath, "config.json")
   );
   await moveIfExists(
-    path.join(vaultPath, ".chuckle", "workflows.json"),
+    path.join(vaultPath, ".signoff", "workflows.json"),
     path.join(vaultPath, "workflows.json")
   );
 
@@ -84,7 +84,7 @@ async function walkMarkdown(dir: string): Promise<string[]> {
     return out;
   }
   for (const e of entries) {
-    if ([".signoff", ".chuckle", ".git", "node_modules"].includes(e.name)) continue;
+    if ([".signoff", ".git", "node_modules"].includes(e.name)) continue;
     const full = path.join(dir, e.name);
     if (e.isDirectory()) out.push(...(await walkMarkdown(full)));
     else if (e.isFile() && e.name.toLowerCase().endsWith(".md")) out.push(full);

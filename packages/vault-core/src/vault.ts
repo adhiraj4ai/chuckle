@@ -33,12 +33,12 @@ const DEFAULT_WORKFLOWS = {
   },
 };
 
-function chuckleHome(): string {
-  return process.env.CHUCKLE_HOME ?? path.join(os.homedir(), ".chuckle");
+function signoffHome(): string {
+  return process.env.SIGNOFF_HOME ?? path.join(os.homedir(), ".signoff");
 }
 
 function registryPath(): string {
-  return path.join(chuckleHome(), "vaults.json");
+  return path.join(signoffHome(), "vaults.json");
 }
 
 export class VaultManager {
@@ -196,7 +196,7 @@ export class VaultManager {
     const existing = await VaultManager.listVaults();
     const filtered = existing.filter((v) => v.path !== info.path);
     const registry: VaultsRegistry = { vaults: [...filtered, info] };
-    await fs.mkdir(chuckleHome(), { recursive: true });
+    await fs.mkdir(signoffHome(), { recursive: true });
     await fs.writeFile(registryPath(), JSON.stringify(registry, null, 2) + "\n");
   }
 
@@ -204,7 +204,7 @@ export class VaultManager {
   static async removeVault(vaultPath: string): Promise<void> {
     const existing = await VaultManager.listVaults();
     const registry: VaultsRegistry = { vaults: existing.filter((v) => v.path !== vaultPath) };
-    await fs.mkdir(chuckleHome(), { recursive: true });
+    await fs.mkdir(signoffHome(), { recursive: true });
     await fs.writeFile(registryPath(), JSON.stringify(registry, null, 2) + "\n");
   }
 }

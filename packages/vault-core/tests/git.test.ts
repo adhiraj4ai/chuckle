@@ -75,8 +75,8 @@ describe("initVaultRepo inside a parent repo", () => {
 
     const parent = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-parent-"));
     await simpleGit(parent).init();
-    await fs.writeFile(path.join(parent, ".gitignore"), ".chuckle/\n");
-    const vaultDir = path.join(parent, ".chuckle");
+    await fs.writeFile(path.join(parent, ".gitignore"), ".signoff/\n");
+    const vaultDir = path.join(parent, ".signoff");
     await fs.mkdir(vaultDir, { recursive: true });
 
     await initVaultRepo(vaultDir);

@@ -62,7 +62,7 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-gate-test-"));
   projectRoot = path.join(tmpDir, "project");
   vaultPath = path.join(projectRoot, ".signoff");
-  process.env.CHUCKLE_HOME = path.join(tmpDir, ".signoff-home");
+  process.env.SIGNOFF_HOME = path.join(tmpDir, ".signoff-home");
   await fs.mkdir(projectRoot, { recursive: true });
   // Vault lives at projectRoot/.signoff — matches gate's SIGNOFF_DIR constant.
   await VaultManager.create(vaultPath, "test-project");
@@ -70,7 +70,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });
-  delete process.env.CHUCKLE_HOME;
+  delete process.env.SIGNOFF_HOME;
 });
 
 describe("evaluateGate", () => {

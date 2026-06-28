@@ -21,11 +21,11 @@ Three components:
 - ESM throughout — all imports end in `.js`, `"type": "module"` in every package.json
 - TypeScript strict mode, `moduleResolution: NodeNext`
 - Vitest for all tests — real vaults created with `VaultManager.create()` in temp dirs; no mocks of vault-core internals
-- `CHUCKLE_HOME` env var overrides `~/.chuckle` for test isolation
+- `SIGNOFF_HOME` env var overrides `~/.signoff` for test isolation
 
 ## Design spec and plans
 
-- Design spec: `docs/superpowers/specs/2026-06-27-chuckle-design.md`
+- Design spec: `docs/superpowers/specs/2026-06-27-signoff-design.md`
 - Plan 1 (vault-core, done): `docs/superpowers/plans/2026-06-27-vault-core.md`
 - Plan 2 (mcp-server, next): `docs/superpowers/plans/2026-06-27-mcp-server.md`
 - Plan 3 (desktop app, pending): not yet written

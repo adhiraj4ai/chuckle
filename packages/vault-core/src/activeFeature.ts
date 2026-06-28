@@ -8,7 +8,7 @@ export interface ActiveFeature {
 }
 
 function pointerPath(projectRoot: string): string {
-  return path.join(projectRoot, ".chuckle", "active-feature.json");
+  return path.join(projectRoot, ".signoff", "active-feature.json");
 }
 
 export async function writeActiveFeature(

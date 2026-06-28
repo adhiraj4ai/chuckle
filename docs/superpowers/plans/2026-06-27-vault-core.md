@@ -23,7 +23,7 @@
 ## File Structure
 
 ```
-chuckle/
+signoff/
 ├── package.json                          # npm workspaces root
 ├── tsconfig.base.json                    # shared TS config
 ├── packages/
@@ -33,7 +33,7 @@ chuckle/
 │       ├── src/
 │       │   ├── types.ts                  # all shared TypeScript types
 │       │   ├── feature.ts                # feature name inference from filename
-│       │   ├── workflow.ts               # read/validate .chuckle/workflows.json
+│       │   ├── workflow.ts               # read/validate .signoff/workflows.json
 │       │   ├── approval.ts               # read/write approval history JSON files
 │       │   ├── git.ts                    # simple-git wrapper (init, commit, push, pull)
 │       │   ├── vault.ts                  # VaultManager class (init vault, open, registry)
@@ -64,7 +64,7 @@ chuckle/
 ```json
 // package.json
 {
-  "name": "chuckle",
+  "name": "signoff",
   "private": true,
   "workspaces": ["packages/*", "apps/*"],
   "scripts": {
@@ -154,7 +154,7 @@ export const VERSION = "0.1.0";
 - [ ] **Step 6: Install dependencies and verify**
 
 ```bash
-cd /path/to/chuckle
+cd /path/to/signoff
 npm install
 ```
 
@@ -386,8 +386,8 @@ import os from "node:os";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-test-"));
-  await fs.mkdir(path.join(tmpDir, ".chuckle"), { recursive: true });
+  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-test-"));
+  await fs.mkdir(path.join(tmpDir, ".signoff"), { recursive: true });
 });
 
 afterEach(async () => {
@@ -409,7 +409,7 @@ const sampleWorkflows = {
 describe("readWorkflows", () => {
   it("reads and parses workflows.json", async () => {
     await fs.writeFile(
-      path.join(tmpDir, ".chuckle", "workflows.json"),
+      path.join(tmpDir, ".signoff", "workflows.json"),
       JSON.stringify(sampleWorkflows)
     );
     const result = await readWorkflows(tmpDir);
@@ -452,7 +452,7 @@ import path from "node:path";
 import type { VaultWorkflows, WorkflowConfig, DocumentType } from "./types.js";
 
 export async function readWorkflows(vaultPath: string): Promise<VaultWorkflows> {
-  const filePath = path.join(vaultPath, ".chuckle", "workflows.json");
+  const filePath = path.join(vaultPath, ".signoff", "workflows.json");
   try {
     const raw = await fs.readFile(filePath, "utf-8");
     return JSON.parse(raw) as VaultWorkflows;
@@ -521,7 +521,7 @@ import os from "node:os";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-approval-"));
+  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-approval-"));
   await fs.mkdir(path.join(tmpDir, "features", "user-auth"), { recursive: true });
 });
 
@@ -769,7 +769,7 @@ import os from "node:os";
 let tmpDir: string;
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-git-"));
+  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-git-"));
 });
 
 afterEach(async () => {
@@ -926,27 +926,27 @@ let tmpDir: string;
 let registryDir: string;
 
 beforeEach(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-vault-"));
-  registryDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-registry-"));
-  process.env.CHUCKLE_HOME = registryDir;
+  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-vault-"));
+  registryDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-registry-"));
+  process.env.SIGNOFF_HOME = registryDir;
 });
 
 afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });
   await fs.rm(registryDir, { recursive: true, force: true });
-  delete process.env.CHUCKLE_HOME;
+  delete process.env.SIGNOFF_HOME;
 });
 
 describe("VaultManager.create", () => {
   it("initializes vault structure", async () => {
     const vm = await VaultManager.create(tmpDir, "test-project", "acme");
-    const chuckleStat = await fs.stat(path.join(tmpDir, ".chuckle"));
-    expect(chuckleStat.isDirectory()).toBe(true);
+    const signoffStat = await fs.stat(path.join(tmpDir, ".signoff"));
+    expect(signoffStat.isDirectory()).toBe(true);
   });
 
   it("writes config.json", async () => {
     await VaultManager.create(tmpDir, "test-project", "acme");
-    const raw = await fs.readFile(path.join(tmpDir, ".chuckle", "config.json"), "utf-8");
+    const raw = await fs.readFile(path.join(tmpDir, ".signoff", "config.json"), "utf-8");
     const config = JSON.parse(raw);
     expect(config.name).toBe("test-project");
     expect(config.org).toBe("acme");
@@ -954,7 +954,7 @@ describe("VaultManager.create", () => {
 
   it("writes default workflows.json", async () => {
     await VaultManager.create(tmpDir, "test-project", "acme");
-    const raw = await fs.readFile(path.join(tmpDir, ".chuckle", "workflows.json"), "utf-8");
+    const raw = await fs.readFile(path.join(tmpDir, ".signoff", "workflows.json"), "utf-8");
     const wf = JSON.parse(raw);
     expect(wf.spec.min_approvals).toBe(1);
     expect(wf.plan.min_approvals).toBe(1);
@@ -977,7 +977,7 @@ describe("VaultManager.open", () => {
 describe("VaultManager.publish", () => {
   it("copies doc into vault features folder and commits", async () => {
     const vm = await VaultManager.create(tmpDir, "test-project", "acme");
-    const srcDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-src-"));
+    const srcDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-src-"));
     const srcFile = path.join(srcDir, "2026-06-27-user-auth-design.md");
     await fs.writeFile(srcFile, "# User Auth Spec\n\nContent here.");
 
@@ -992,7 +992,7 @@ describe("VaultManager.publish", () => {
 
   it("creates approval record with submitted status", async () => {
     const vm = await VaultManager.create(tmpDir, "test-project", "acme");
-    const srcDir = await fs.mkdtemp(path.join(os.tmpdir(), "chuckle-src2-"));
+    const srcDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-src2-"));
     const srcFile = path.join(srcDir, "2026-06-27-user-auth-design.md");
     await fs.writeFile(srcFile, "# Spec");
 
@@ -1057,12 +1057,12 @@ const DEFAULT_WORKFLOWS = {
   },
 };
 
-function chuckleHome(): string {
-  return process.env.CHUCKLE_HOME ?? path.join(os.homedir(), ".chuckle");
+function signoffHome(): string {
+  return process.env.SIGNOFF_HOME ?? path.join(os.homedir(), ".signoff");
 }
 
 function registryPath(): string {
-  return path.join(chuckleHome(), "vaults.json");
+  return path.join(signoffHome(), "vaults.json");
 }
 
 export class VaultManager {
@@ -1083,7 +1083,7 @@ export class VaultManager {
   }
 
   static async create(vaultPath: string, name: string, org: string): Promise<VaultManager> {
-    await fs.mkdir(path.join(vaultPath, ".chuckle"), { recursive: true });
+    await fs.mkdir(path.join(vaultPath, ".signoff"), { recursive: true });
     await fs.mkdir(path.join(vaultPath, "features"), { recursive: true });
 
     const config: VaultConfig = {
@@ -1093,18 +1093,18 @@ export class VaultManager {
     };
 
     await fs.writeFile(
-      path.join(vaultPath, ".chuckle", "config.json"),
+      path.join(vaultPath, ".signoff", "config.json"),
       JSON.stringify(config, null, 2) + "\n"
     );
 
     await fs.writeFile(
-      path.join(vaultPath, ".chuckle", "workflows.json"),
+      path.join(vaultPath, ".signoff", "workflows.json"),
       JSON.stringify(DEFAULT_WORKFLOWS, null, 2) + "\n"
     );
 
     await fs.writeFile(
       path.join(vaultPath, "README.md"),
-      `# ${name} — SignOff Vault\n\nManaged by [SignOff](https://github.com/chuckle).\n`
+      `# ${name} — SignOff Vault\n\nManaged by [SignOff](https://github.com/signoff).\n`
     );
 
     await initVaultRepo(vaultPath);
@@ -1113,13 +1113,13 @@ export class VaultManager {
   }
 
   static async open(vaultPath: string): Promise<VaultManager> {
-    const configPath = path.join(vaultPath, ".chuckle", "config.json");
+    const configPath = path.join(vaultPath, ".signoff", "config.json");
     try {
       const raw = await fs.readFile(configPath, "utf-8");
       const config = JSON.parse(raw) as VaultConfig;
       return new VaultManager(vaultPath, config);
     } catch {
-      throw new Error(`${vaultPath} is not a SignOff vault (missing .chuckle/config.json)`);
+      throw new Error(`${vaultPath} is not a SignOff vault (missing .signoff/config.json)`);
     }
   }
 
@@ -1191,7 +1191,7 @@ export class VaultManager {
     const existing = await VaultManager.listVaults();
     const filtered = existing.filter((v) => v.path !== info.path);
     const registry: VaultsRegistry = { vaults: [...filtered, info] };
-    await fs.mkdir(chuckleHome(), { recursive: true });
+    await fs.mkdir(signoffHome(), { recursive: true });
     await fs.writeFile(registryPath(), JSON.stringify(registry, null, 2) + "\n");
   }
 }
@@ -1300,6 +1300,6 @@ git commit -m "feat(vault-core): publish complete public API"
 
 - All types from `types.ts` are used consistently across tasks — no name drift
 - `appendHistory` is pure/immutable — safe for both app and MCP server to use
-- `CHUCKLE_HOME` env var allows test isolation of the registry
+- `SIGNOFF_HOME` env var allows test isolation of the registry
 - `pullLatest` and `pushToRemote` have no unit tests (require a real remote) — integration tested in mcp-server plan
 - Feature name inference strips `-design`, `-spec`, `-plan` suffixes — covers all superpowers skill output patterns

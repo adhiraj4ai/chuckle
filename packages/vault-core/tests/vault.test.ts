@@ -15,13 +15,13 @@ beforeEach(async () => {
   vaultPath = path.join(tmp, "project", ".signoff");
   await fs.mkdir(vaultPath, { recursive: true });
   registryDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-registry-"));
-  process.env.CHUCKLE_HOME = registryDir;
+  process.env.SIGNOFF_HOME = registryDir;
 });
 
 afterEach(async () => {
   await fs.rm(tmp, { recursive: true, force: true });
   await fs.rm(registryDir, { recursive: true, force: true });
-  delete process.env.CHUCKLE_HOME;
+  delete process.env.SIGNOFF_HOME;
 });
 
 describe("VaultManager.create", () => {

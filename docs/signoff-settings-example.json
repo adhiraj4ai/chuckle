@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "chuckle": {
-      "command": "chuckle-mcp",
+    "signoff": {
+      "command": "signoff-mcp",
       "args": ["--vault", "/absolute/path/to/your-project-vault"]
     }
   },
@@ -9,7 +9,7 @@
     "PreToolUse": [
       {
         "matcher": "Write|Edit|MultiEdit|NotebookEdit",
-        "hooks": [{ "type": "command", "command": "chuckle-gate" }]
+        "hooks": [{ "type": "command", "command": "signoff-gate" }]
       }
     ]
   }

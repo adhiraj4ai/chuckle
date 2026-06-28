@@ -12,13 +12,13 @@ beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-mcp-submit-"));
   // vaultPath is <tmp>/project/.signoff so project root is <tmp>/project/
   vaultPath = path.join(tmpDir, "project", ".signoff");
-  process.env.CHUCKLE_HOME = path.join(tmpDir, ".chuckle");
+  process.env.SIGNOFF_HOME = path.join(tmpDir, ".signoff");
   await VaultManager.create(vaultPath, "p");
 });
 
 afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true });
-  delete process.env.CHUCKLE_HOME;
+  delete process.env.SIGNOFF_HOME;
 });
 
 describe("handleSubmit", () => {

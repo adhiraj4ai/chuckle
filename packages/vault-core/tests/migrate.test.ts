@@ -18,9 +18,9 @@ afterEach(async () => {
 describe("migrateVault", () => {
   it("converts a legacy features/ vault to the docs-as-vault layout", async () => {
     // build a legacy vault
-    await fs.mkdir(path.join(tmpDir, ".chuckle"), { recursive: true });
-    await fs.writeFile(path.join(tmpDir, ".chuckle", "config.json"), '{"name":"x","org":"y","created_at":"t"}');
-    await fs.writeFile(path.join(tmpDir, ".chuckle", "workflows.json"), "{}");
+    await fs.mkdir(path.join(tmpDir, ".signoff"), { recursive: true });
+    await fs.writeFile(path.join(tmpDir, ".signoff", "config.json"), '{"name":"x","org":"y","created_at":"t"}');
+    await fs.writeFile(path.join(tmpDir, ".signoff", "workflows.json"), "{}");
     await fs.mkdir(path.join(tmpDir, "features", "user-auth"), { recursive: true });
     await fs.writeFile(path.join(tmpDir, "features", "user-auth", "spec.md"), "# Spec");
     await fs.writeFile(

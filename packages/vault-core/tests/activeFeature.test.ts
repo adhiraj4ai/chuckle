@@ -25,7 +25,7 @@ describe("active-feature pointer", () => {
     expect(written.publishedAt).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/);
 
     const onDisk = JSON.parse(
-      await fs.readFile(path.join(projectRoot, ".chuckle", "active-feature.json"), "utf-8")
+      await fs.readFile(path.join(projectRoot, ".signoff", "active-feature.json"), "utf-8")
     );
     expect(onDisk).toEqual(written);
   });
@@ -50,24 +50,24 @@ describe("active-feature pointer", () => {
   });
 
   it("throws when the pointer is malformed", async () => {
-    await fs.mkdir(path.join(projectRoot, ".chuckle"), { recursive: true });
-    await fs.writeFile(path.join(projectRoot, ".chuckle", "active-feature.json"), "{ not json");
+    await fs.mkdir(path.join(projectRoot, ".signoff"), { recursive: true });
+    await fs.writeFile(path.join(projectRoot, ".signoff", "active-feature.json"), "{ not json");
     await expect(readActiveFeature(projectRoot)).rejects.toThrow();
   });
 
   it("throws when required fields are missing", async () => {
-    await fs.mkdir(path.join(projectRoot, ".chuckle"), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, ".signoff"), { recursive: true });
     await fs.writeFile(
-      path.join(projectRoot, ".chuckle", "active-feature.json"),
+      path.join(projectRoot, ".signoff", "active-feature.json"),
       JSON.stringify({ feature: "x" })
     );
     await expect(readActiveFeature(projectRoot)).rejects.toThrow(/vaultPath/);
   });
 
   it("throws when publishedAt is missing", async () => {
-    await fs.mkdir(path.join(projectRoot, ".chuckle"), { recursive: true });
+    await fs.mkdir(path.join(projectRoot, ".signoff"), { recursive: true });
     await fs.writeFile(
-      path.join(projectRoot, ".chuckle", "active-feature.json"),
+      path.join(projectRoot, ".signoff", "active-feature.json"),
       JSON.stringify({ feature: "x", vaultPath: "/v" })
     );
     await expect(readActiveFeature(projectRoot)).rejects.toThrow(/publishedAt/);

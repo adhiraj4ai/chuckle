@@ -50,7 +50,7 @@ beforeEach(async () => {
   // Vault is at <tmpDir>/project/.signoff so project root is <tmpDir>/project
   await fs.mkdir(path.join(tmpDir, 'project'), { recursive: true })
   vaultPath = path.join(tmpDir, 'project', '.signoff')
-  process.env.CHUCKLE_HOME = path.join(tmpDir, '.chuckle')
+  process.env.SIGNOFF_HOME = path.join(tmpDir, '.signoff')
   await VaultManager.create(vaultPath, 'test-project', 'test-org')
   // Set a stable local git identity so reviewer keys are deterministic across machines
   await simpleGit(vaultPath).addConfig('user.email', 'dev@org.com')
@@ -59,18 +59,18 @@ beforeEach(async () => {
 
 afterEach(async () => {
   await fs.rm(tmpDir, { recursive: true, force: true })
-  delete process.env.CHUCKLE_HOME
+  delete process.env.SIGNOFF_HOME
 })
 
 describe('listVaults', () => {
   it('returns empty array on fresh registry', async () => {
     // createVault auto-registers; create a clean env
     const cleanDir = await fs.mkdtemp(path.join(os.tmpdir(), 'signoff-list-'))
-    process.env.CHUCKLE_HOME = path.join(cleanDir, '.chuckle')
+    process.env.SIGNOFF_HOME = path.join(cleanDir, '.signoff')
     const result = await listVaults()
     expect(result).toEqual([])
     await fs.rm(cleanDir, { recursive: true, force: true })
-    process.env.CHUCKLE_HOME = path.join(tmpDir, '.chuckle')
+    process.env.SIGNOFF_HOME = path.join(tmpDir, '.signoff')
   })
 })
 

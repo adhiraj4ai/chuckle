@@ -7,7 +7,6 @@ apps/desktop/out/
 docs/superpowers/
 .superpowers/
 
-# Chuckle project-local state (active-feature pointer)
-.chuckle/
+# SignOff project-local state (active-feature pointer)
 .signoff/
 apps/desktop/release/
