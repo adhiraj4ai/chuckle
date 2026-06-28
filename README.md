@@ -4,7 +4,7 @@
 
 SignOff puts a human approval gate in front of spec and plan documents, so an AI agent (e.g. Claude Code) can't start implementing until a human reviewer has signed off. The agent publishes a spec, a person reviews and approves it, and only then is the agent cleared to write code. Everything syncs over plain git — there's no backend to run.
 
-> Repository: [`adhiraj4ai/chuckle`](https://github.com/adhiraj4ai/chuckle) · the product is **SignOff**.
+> Repository: [`adhiraj4ai/signoff`](https://github.com/adhiraj4ai/signoff) · the product is **SignOff**.
 
 ---
 
@@ -41,7 +41,7 @@ This is an npm-workspaces monorepo with three pieces:
 
 ## Install
 
-Download the latest installer from the [**Releases**](https://github.com/adhiraj4ai/chuckle/releases) page:
+Download the latest installer from the [**Releases**](https://github.com/adhiraj4ai/signoff/releases) page:
 
 | Platform | File |
 |---|---|
@@ -56,8 +56,8 @@ Download the latest installer from the [**Releases**](https://github.com/adhiraj
 Requires **Node.js ≥ 20**.
 
 ```bash
-git clone https://github.com/adhiraj4ai/chuckle.git
-cd chuckle
+git clone https://github.com/adhiraj4ai/signoff.git
+cd signoff
 npm install
 npm run build          # build all workspaces
 
@@ -84,7 +84,7 @@ Windows and Linux installers can be cross-built from macOS using the
 ## Project structure
 
 ```
-chuckle/
+signoff/
 ├── packages/
 │   ├── vault-core/     # git + approval logic (TypeScript)
 │   └── mcp-server/     # MCP server for Claude Code

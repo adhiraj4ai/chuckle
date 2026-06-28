@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import type { GitStatus, SyncState } from '@shared/ipc-types'
 import { AUTO_SYNC_OPTIONS } from '../hooks/useAutoSync'
 
-const PROJECT_DOCS_URL = 'https://github.com/adhiraj4ai/chuckle'
+const PROJECT_DOCS_URL = 'https://github.com/adhiraj4ai/signoff'
 
 interface Props {
   vaultPath: string

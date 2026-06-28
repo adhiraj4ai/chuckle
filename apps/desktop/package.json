@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "SignOff desktop app — vault UI for document review and approval",
   "author": "Rajan Adhikari",
-  "homepage": "https://github.com/adhiraj4ai/chuckle",
+  "homepage": "https://github.com/adhiraj4ai/signoff",
   "type": "module",
   "main": "out/main/index.js",
   "scripts": {
