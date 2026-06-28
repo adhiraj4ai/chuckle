@@ -166,7 +166,7 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
         ) : setupDir !== null ? (
           <div className="rounded-xl border border-border bg-surface px-5 py-5 flex flex-col gap-4">
             <div className="flex flex-col gap-1">
-              <label htmlFor="setup-project-name" className="text-[11px] font-semibold text-fg/50 uppercase tracking-wide">
+              <label htmlFor="setup-project-name" className="text-[11px] font-semibold text-fg/50">
                 Project name
               </label>
               <input
@@ -179,7 +179,7 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label htmlFor="setup-approvers" className="text-[11px] font-semibold text-fg/50 uppercase tracking-wide">
+              <label htmlFor="setup-approvers" className="text-[11px] font-semibold text-fg/50">
                 Approvers
               </label>
               <textarea
