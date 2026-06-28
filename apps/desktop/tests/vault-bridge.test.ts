@@ -22,6 +22,10 @@ import {
   writeVaultWorkflows,
   readVaultWorkflows,
   isDocumentStale,
+  syncVault,
+  connectRemote,
+  cloneVault as cloneVaultBridge,
+  getSyncStateBridge,
 } from '../src/main/vault-bridge.js'
 
 let tmpDir: string
@@ -48,6 +52,9 @@ beforeEach(async () => {
   vaultPath = path.join(tmpDir, 'project', '.signoff')
   process.env.CHUCKLE_HOME = path.join(tmpDir, '.chuckle')
   await VaultManager.create(vaultPath, 'test-project', 'test-org')
+  // Set a stable local git identity so reviewer keys are deterministic across machines
+  await simpleGit(vaultPath).addConfig('user.email', 'dev@org.com')
+  await simpleGit(vaultPath).addConfig('user.name', 'Dev')
 })
 
 afterEach(async () => {
@@ -323,5 +330,167 @@ describe('createVault onProgress', () => {
     expect(calls.length).toBeGreaterThan(0)
     const last = calls[calls.length - 1]
     expect(last.done).toBe(last.total)
+  })
+})
+
+// helper: clone the test vault to a 2nd working copy that shares the bare remote
+async function twoClonesSharingRemote() {
+  const remote = path.join(tmpDir, 'remote.git')
+  await simpleGit().init(['--bare', remote])
+  // give the 1st vault a git identity so membership enforcement passes
+  await simpleGit(vaultPath).addConfig('user.email', 'dev@org.com')
+  await simpleGit(vaultPath).addConfig('user.name', 'Dev')
+  await simpleGit(vaultPath).addRemote('origin', remote)
+  await simpleGit(vaultPath).push(['-u', 'origin', (await simpleGit(vaultPath).status()).current ?? 'master'])
+  const second = path.join(tmpDir, 'second')
+  await simpleGit().clone(remote, second)
+  // give the 2nd clone a git identity
+  await simpleGit(second).addConfig('user.email', 'rev2@org.com')
+  await simpleGit(second).addConfig('user.name', 'Rev Two')
+  return second
+}
+
+describe('transactional mutations', () => {
+  it('two reviewers on the same doc both land via transactional re-apply', async () => {
+    // configure two required approvers; seed a doc; publish to a shared remote
+    await writeVaultWorkflows(vaultPath, {
+      spec: { required_approvers: ['dev@org.com', 'rev2@org.com'], min_approvals: 2 },
+      plan: { required_approvers: [], min_approvals: 1 },
+    })
+    await seedDoc('user-auth', 'spec', '# v1\n')
+    const second = await twoClonesSharingRemote()
+
+    // reviewer 1 (dev@org.com) approves via the bridge (transactional: pull→apply→push)
+    await reviewAction(vaultPath, 'user-auth', 'spec', 'start_review')
+    await reviewAction(vaultPath, 'user-auth', 'spec', 'approve')
+
+    // reviewer 2 approves from the second clone's vault dir
+    await reviewAction(second, 'user-auth', 'spec', 'start_review')
+    await reviewAction(second, 'user-auth', 'spec', 'approve')
+
+    // reviewer 1 pulls; both reviewer entries are present (no lost write, no conflict)
+    await syncVault(vaultPath)
+    const rec = await getDocumentApproval(vaultPath, 'user-auth', 'spec')
+    expect(Object.keys(rec!.reviewers).sort()).toEqual(['dev@org.com', 'rev2@org.com'])
+  })
+
+  it('a mutation with no remote commits locally and reports pushed:false', async () => {
+    await seedDoc('user-auth', 'spec')
+    const r = await reviewAction(vaultPath, 'user-auth', 'spec', 'start_review')
+    expect(r.pushed).toBe(false)
+    const rec = await getDocumentApproval(vaultPath, 'user-auth', 'spec')
+    expect(rec!.reviewers['dev@org.com'].status).toBe('in_review')
+  })
+})
+
+describe('connectRemote', () => {
+  it('connectRemote adds origin + publishes to a bare remote', async () => {
+    const remote = path.join(tmpDir, 'remote.git')
+    await simpleGit().init(['--bare', remote])
+    const r = await connectRemote(vaultPath, remote)
+    expect(r.ok).toBe(true)
+    const st = await getSyncStateBridge(vaultPath)
+    expect(st.hasRemote).toBe(true)
+    expect(st.hasUpstream).toBe(true)
+  })
+})
+
+describe('cloneVault bridge', () => {
+  it('cloneVault clones a published vault into a dir and registers it', async () => {
+    const remote = path.join(tmpDir, 'remote2.git')
+    await simpleGit().init(['--bare', remote])
+    await connectRemote(vaultPath, remote)
+    const dest = path.join(tmpDir, 'cloned')
+    const opened = await cloneVaultBridge(remote, dest)
+    expect(opened.name).toBe('test-project')
+    expect((await fs.stat(path.join(dest, 'config.json'))).isFile()).toBe(true)
+  })
+
+  it('cloneVault on a non-vault repo errors', async () => {
+    const plain = path.join(tmpDir, 'plain.git')
+    await simpleGit().init(['--bare', plain])
+    // a bare repo with one non-config commit
+    const seed = path.join(tmpDir, 'seed')
+    await simpleGit().clone(plain, seed)
+    await fs.writeFile(path.join(seed, 'readme.md'), '# hi\n')
+    await simpleGit(seed).add('.')
+    await simpleGit(seed).addConfig('user.email', 'a@b.c')
+    await simpleGit(seed).addConfig('user.name', 'A')
+    await simpleGit(seed).commit('init')
+    await simpleGit(seed).push(['-u', 'origin', (await simpleGit(seed).status()).current ?? 'master'])
+    await expect(cloneVaultBridge(plain, path.join(tmpDir, 'notvault'))).rejects.toThrow(/not a Signoff vault/i)
+  })
+})
+
+describe('transact network-degrade and divergent-conflict', () => {
+  it('network pull failure mid-transaction: action commits locally, resolves with pushed:false (no throw)', async () => {
+    // Set up a real remote so the vault is "online" (hasRemote + hasUpstream)
+    const remote = path.join(tmpDir, 'net-remote.git')
+    await simpleGit().init(['--bare', remote])
+    await simpleGit(vaultPath).addRemote('origin', remote)
+    await simpleGit(vaultPath).push(['-u', 'origin', (await simpleGit(vaultPath).status()).current ?? 'master'])
+
+    await seedDoc('net-feature', 'spec')
+
+    // Sabotage the remote to simulate a network error: point origin at a non-existent path
+    await simpleGit(vaultPath).remote(['set-url', 'origin', '/nonexistent/path/nowhere.git'])
+
+    // reviewAction should resolve (not throw), degrade to local commit
+    const result = await reviewAction(vaultPath, 'net-feature', 'spec', 'start_review')
+    expect(result.pushed).toBe(false)
+    expect(result.conflict).toBeFalsy()
+
+    // The reviewer entry must be present locally (change not lost)
+    const rec = await getDocumentApproval(vaultPath, 'net-feature', 'spec')
+    expect(rec?.reviewers['dev@org.com']?.status).toBe('in_review')
+  })
+
+  it('divergent conflict (ahead>1): reviewAction resolves with conflict:true (not thrown)', async () => {
+    // Set up shared remote: vault1 (vaultPath) and vault2
+    const remote = path.join(tmpDir, 'div-remote.git')
+    await simpleGit().init(['--bare', remote])
+    await simpleGit(vaultPath).addRemote('origin', remote)
+    await simpleGit(vaultPath).push(['-u', 'origin', (await simpleGit(vaultPath).status()).current ?? 'master'])
+
+    // Clone a second vault
+    const second = path.join(tmpDir, 'div-second')
+    await simpleGit().clone(remote, second)
+    await simpleGit(second).addConfig('user.email', 'rev2@org.com')
+    await simpleGit(second).addConfig('user.name', 'Rev Two')
+
+    // Seed doc and publish from vault1
+    await seedDoc('div-feature', 'spec')
+    // Push seed commit from vault1 so second can see the doc
+    await simpleGit(vaultPath).push()
+
+    // Both vault1 and vault2 make a local commit each (simulate overlap):
+    // vault1: start_review (local only — disconnect remote first)
+    await simpleGit(vaultPath).remote(['set-url', 'origin', '/nonexistent/path/nowhere.git'])
+    await reviewAction(vaultPath, 'div-feature', 'spec', 'start_review')
+
+    // Restore remote and make vault2 push a competing change
+    await simpleGit(vaultPath).remote(['set-url', 'origin', remote])
+    // vault2 also pulls and approves (pushing to remote so remote is ahead of vault1)
+    await simpleGit(second).pull(['--rebase'])
+    // create a competing commit on second
+    const v2SeedDoc = path.join(second, 'docs/specs/div-feature.md')
+    // write a note file in vault2 directly to create a competing commit
+    const noteFile = path.join(second, 'test-note.txt')
+    await fs.writeFile(noteFile, 'competing change\n')
+    await simpleGit(second).add(['test-note.txt'])
+    await simpleGit(second).commit('competing: note from rev2', undefined, { '--author': 'Rev Two <rev2@org.com>' })
+    await simpleGit(second).push()
+
+    // Now vault1 has 1 unpushed commit; attempt another local commit to make ahead=2
+    // This simulates the ahead>1 case — make one more local commit without pushing
+    const noteFile2 = path.join(vaultPath, 'local-note.txt')
+    await fs.writeFile(noteFile2, 'another local change\n')
+    await simpleGit(vaultPath).add(['local-note.txt'])
+    await simpleGit(vaultPath).commit('local: extra commit', undefined, { '--author': 'Dev <dev@org.com>' })
+
+    // vault1 now has 2 local commits and the remote has advanced: push reject + ahead>1 → conflict returned
+    const result = await reviewAction(vaultPath, 'div-feature', 'spec', 'approve')
+    expect(result.conflict).toBe(true)
+    expect(result.pushed).toBe(false)
   })
 })

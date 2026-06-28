@@ -19,6 +19,8 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
   const [setupName, setSetupName] = useState('')
   const [setupApprovers, setSetupApprovers] = useState('')
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
+  const [cloneOpen, setCloneOpen] = useState(false)
+  const [cloneUrl, setCloneUrl] = useState('')
   const busyRef = useRef(false)
 
   useEffect(() => {
@@ -83,6 +85,39 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
     setSetupName('')
     setSetupApprovers('')
     setError(null)
+  }
+
+  function handleCloneClick(): void {
+    setCloneOpen(true)
+    setCloneUrl('')
+    setError(null)
+  }
+
+  function handleCancelClone(): void {
+    setCloneOpen(false)
+    setCloneUrl('')
+    setError(null)
+  }
+
+  async function handleConfirmClone(): Promise<void> {
+    if (busyRef.current) return
+    const url = cloneUrl.trim()
+    if (!url) return
+    setError(null)
+    busyRef.current = true
+    setBusy(true)
+    try {
+      const dir = await window.chuckle.vault.selectDirectory()
+      if (!dir) return
+      const vault = await window.chuckle.vault.clone(url, dir)
+      setCloneOpen(false)
+      onVaultSelected(vault.path, vault.name)
+    } catch (e) {
+      setError(`Clone failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      busyRef.current = false
+      setBusy(false)
+    }
   }
 
   if (vaults === null) {
@@ -219,6 +254,42 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
               </button>
             </div>
           </div>
+        ) : cloneOpen ? (
+          <div className="rounded-xl border border-border bg-surface px-5 py-5 flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="clone-url" className="text-[11px] font-semibold text-fg/50">
+                Git URL
+              </label>
+              <input
+                id="clone-url"
+                aria-label="Git URL"
+                type="text"
+                placeholder="Git URL (e.g. git@github.com:org/repo.git)"
+                value={cloneUrl}
+                onChange={(e) => setCloneUrl(e.target.value)}
+                className="w-full rounded-lg border border-border bg-surface text-fg/80 px-3 py-2 text-[13px] focus:outline-none focus:ring-1 focus:ring-iris"
+                autoFocus
+              />
+              <p className="text-[11.5px] text-fg/40 leading-snug">
+                Paste a git URL to clone an existing Signoff vault, then choose a destination folder.
+              </p>
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                onClick={handleConfirmClone}
+                disabled={busy || !cloneUrl.trim()}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-iris text-white text-[13px] font-semibold hover:bg-iris-ink active:brightness-95 disabled:opacity-50 transition"
+              >
+                Clone
+              </button>
+              <button
+                onClick={handleCancelClone}
+                className="flex-1 px-4 py-2.5 rounded-lg border border-border bg-surface text-fg/80 text-[13px] font-medium hover:bg-app transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             <div className="flex gap-2.5">
@@ -235,6 +306,15 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
                 className="flex-1 px-4 py-2.5 rounded-lg border border-border bg-surface text-fg/80 text-[13px] font-medium hover:bg-app disabled:opacity-50 transition"
               >
                 Open
+              </button>
+            </div>
+            <div className="mt-2.5">
+              <button
+                onClick={handleCloneClick}
+                disabled={busy}
+                className="w-full px-4 py-2.5 rounded-lg border border-border bg-surface text-fg/80 text-[13px] font-medium hover:bg-app disabled:opacity-50 transition"
+              >
+                Clone a vault
               </button>
             </div>
             <p className="mt-3 text-[12px] text-fg/40 leading-relaxed">

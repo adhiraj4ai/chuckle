@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import type { GitStatus } from '@shared/ipc-types'
+import type { GitStatus, SyncState } from '@shared/ipc-types'
 import { AUTO_SYNC_OPTIONS } from '../hooks/useAutoSync'
 
 const PROJECT_DOCS_URL = 'https://github.com/adhiraj4ai/chuckle'
@@ -61,6 +61,7 @@ export function StatusBar({
 }: Props): React.ReactElement {
   const [remote, setRemote] = useState<string | null>(null)
   const [status, setStatus] = useState<GitStatus | null>(null)
+  const [syncStateData, setSyncStateData] = useState<SyncState | null>(null)
   const [author, setAuthor] = useState<{ name: string; email: string } | null>(null)
   const [open, setOpen] = useState<'identity' | 'vault' | 'settings' | null>(null)
   const barRef = useRef<HTMLElement>(null)
@@ -71,11 +72,13 @@ export function StatusBar({
       window.chuckle.vault.getRemote(vaultPath),
       window.chuckle.vault.status(vaultPath),
       window.chuckle.vault.author(vaultPath),
-    ]).then(([r, s, a]) => {
+      window.chuckle.vault.syncState(vaultPath),
+    ]).then(([r, s, a, ss]) => {
       if (!alive) return
       setRemote(r)
       setStatus(s)
       setAuthor(a)
+      setSyncStateData(ss)
     })
     return () => {
       alive = false
@@ -94,9 +97,15 @@ export function StatusBar({
 
   const repo = ghRepo(remote)
   const noUpstream = !status?.tracking
-  const ahead = status?.ahead ?? 0
-  const unsynced = noUpstream || ahead > 0
   const autoLabel = AUTO_SYNC_OPTIONS.find((o) => o.ms === autoSyncMs)?.label ?? 'Off'
+
+  // syncState-derived indicator: "Not connected" | "Synced" | "↑N ↓M"
+  function syncIndicatorLabel(): string {
+    if (!syncStateData) return '…'
+    if (!syncStateData.hasRemote) return 'Not connected'
+    if (syncStateData.hasUpstream && syncStateData.ahead === 0 && syncStateData.behind === 0) return 'Synced'
+    return `↑${syncStateData.ahead} ↓${syncStateData.behind}`
+  }
 
   async function contribute(): Promise<void> {
     if (noUpstream && remote) {
@@ -154,10 +163,16 @@ export function StatusBar({
       </button>
       <Sep />
 
-      {/* Changes (unsynced) */}
-      <button className={cls} onClick={onOpenSourceControl} title="Unsynced commits">
-        <span className={unsynced ? 'text-wait' : 'text-railfg/55'}>
-          {noUpstream ? 'no upstream' : ahead > 0 ? `↑ ${ahead}` : 'up to date'}
+      {/* Sync state indicator */}
+      <button className={cls} onClick={onOpenSourceControl} title="Sync state">
+        <span className={
+          syncStateData && !syncStateData.hasRemote
+            ? 'text-fg/40'
+            : (syncStateData?.ahead ?? 0) > 0 || (syncStateData ? !syncStateData.hasUpstream : false)
+              ? 'text-wait'
+              : 'text-railfg/55'
+        }>
+          {syncIndicatorLabel()}
         </span>
       </button>
       <Sep />

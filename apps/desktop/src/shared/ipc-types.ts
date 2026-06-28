@@ -12,6 +12,8 @@ import type {
   CommentsFile,
   CommentThread,
   CommentEntry,
+  GitErrorKind,
+  SyncState,
 } from '@chuckle/vault-core'
 
 export type {
@@ -28,6 +30,8 @@ export type {
   CommentsFile,
   CommentThread,
   CommentEntry,
+  GitErrorKind,
+  SyncState,
 }
 
 export interface FeatureEntry {
@@ -60,15 +64,19 @@ export interface GitStatus {
 }
 
 /** Outcome of a review/edit action: it always commits locally; `pushed` says
- *  whether that commit reached the remote so collaborators can see it. */
+ *  whether that commit reached the remote so collaborators can see it.
+ *  `conflict` is true when a git conflict (rebase overlap or divergent history)
+ *  prevented the push — the caller should prompt the user to resync and retry. */
 export interface ReviewResult {
   pushed: boolean
   reason?: string
+  conflict?: boolean
 }
 
 export type IpcChannels =
   | 'vault:list' | 'vault:remove' | 'vault:create' | 'vault:open-existing' | 'vault:select-directory' | 'vault:sync' | 'vault:get-remote'
   | 'vault:log' | 'vault:status' | 'vault:push' | 'vault:publish-branch' | 'vault:author'
+  | 'vault:connect-remote' | 'vault:clone' | 'vault:sync-state'
   | 'features:list'
   | 'document:read' | 'document:write' | 'document:get-approval' | 'document:is-stale'
   | 'review:action'
@@ -90,9 +98,12 @@ export interface ChuckleAPI {
     getRemote(vaultPath: string): Promise<string | null>
     log(vaultPath: string): Promise<GitCommit[]>
     status(vaultPath: string): Promise<GitStatus>
-    push(vaultPath: string): Promise<{ ok: boolean; error?: string }>
-    publishBranch(vaultPath: string): Promise<{ ok: boolean; error?: string }>
+    push(vaultPath: string): Promise<{ ok: boolean; error?: string; errorKind?: GitErrorKind }>
+    publishBranch(vaultPath: string): Promise<{ ok: boolean; error?: string; errorKind?: GitErrorKind }>
     author(vaultPath: string): Promise<{ name: string; email: string }>
+    connectRemote(vaultPath: string, url: string): Promise<{ ok: boolean; error?: string; errorKind?: GitErrorKind }>
+    clone(url: string, destDir: string): Promise<VaultOpenResult>
+    syncState(vaultPath: string): Promise<SyncState>
   }
   features: {
     list(vaultPath: string): Promise<FeatureEntry[]>

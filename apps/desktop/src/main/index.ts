@@ -31,6 +31,9 @@ import {
   pushVault,
   publishBranch,
   getVaultAuthor,
+  connectRemote,
+  cloneVault,
+  getSyncStateBridge,
 } from './vault-bridge.js'
 
 function createWindow(): void {
@@ -87,6 +90,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle('workflows:read', (_e, { vaultPath }) => readVaultWorkflows(vaultPath))
   ipcMain.handle('workflows:write', (_e, { vaultPath, workflows }) => writeVaultWorkflows(vaultPath, workflows))
   ipcMain.handle('document:is-stale', (_e, { vaultPath, feature, type }) => isDocumentStale(vaultPath, feature, type))
+  ipcMain.handle('vault:connect-remote', (_e, { vaultPath, url }) => connectRemote(vaultPath, url))
+  ipcMain.handle('vault:clone', (_e, { url, destDir }) => cloneVault(url, destDir))
+  ipcMain.handle('vault:sync-state', (_e, { vaultPath }) => getSyncStateBridge(vaultPath))
 }
 
 app.whenReady().then(() => {

@@ -17,6 +17,9 @@ const mockChuckle: ChuckleAPI = {
     publishBranch: vi.fn(),
     author: vi.fn(),
     onSetupProgress: vi.fn().mockReturnValue(() => {}),
+    connectRemote: vi.fn(),
+    clone: vi.fn(),
+    syncState: vi.fn().mockResolvedValue({ branch: 'main', hasRemote: false, hasUpstream: false, ahead: 0, behind: 0 }),
   },
   features: {
     list: vi.fn(),

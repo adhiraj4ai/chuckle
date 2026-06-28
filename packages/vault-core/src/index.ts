@@ -69,12 +69,12 @@ export { writeActiveFeature, readActiveFeature } from "./activeFeature.js";
 
 // Git
 export {
-  initVaultRepo,
-  stageAndCommit,
-  pullLatest,
-  pushToRemote,
-  getHeadSha,
+  initVaultRepo, stageAndCommit, pullLatest, pushToRemote, getHeadSha,
+  SyncConflictError, classifyGitError, hasRemote, getRemoteUrl, addRemote,
+  getCurrentBranch, publishBranch, fetch, pullRebase, push, resetHardToUpstream,
+  cloneVault, getSyncState,
 } from "./git.js";
+export type { GitErrorKind, SyncState } from "./git.js";
 
 // VaultManager
 export { VaultManager } from "./vault.js";

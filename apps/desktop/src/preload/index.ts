@@ -20,6 +20,9 @@ const api: ChuckleAPI = {
     push: (vaultPath) => ipcRenderer.invoke('vault:push', { vaultPath }),
     publishBranch: (vaultPath) => ipcRenderer.invoke('vault:publish-branch', { vaultPath }),
     author: (vaultPath) => ipcRenderer.invoke('vault:author', { vaultPath }),
+    connectRemote: (vaultPath, url) => ipcRenderer.invoke('vault:connect-remote', { vaultPath, url }),
+    clone: (url, destDir) => ipcRenderer.invoke('vault:clone', { url, destDir }),
+    syncState: (vaultPath) => ipcRenderer.invoke('vault:sync-state', { vaultPath }),
   },
   features: {
     list: (vaultPath) => ipcRenderer.invoke('features:list', { vaultPath }),

@@ -7,8 +7,11 @@ import {
   readApproval,
   writeApproval,
   stageAndCommit,
-  pushToRemote,
-  pullLatest,
+  pullRebase,
+  push,
+  getSyncState,
+  resetHardToUpstream,
+  SyncConflictError,
   readWorkflows,
   getWorkflowForType,
   getApprovalStatus,
@@ -29,23 +32,84 @@ import {
   addReply,
   setResolved,
   commentsRelPath,
+  addRemote,
+  publishBranch as corePublishBranch,
+  cloneVault as coreCloneVault,
+  classifyGitError,
   type VaultInfo,
   type VaultWorkflows,
   type ApprovalRecord,
   type DocumentType,
   type ReviewAction,
   type CommentsFile,
+  type GitErrorKind,
+  type SyncState,
 } from '@chuckle/vault-core'
 import type { FeatureEntry, GitCommit, GitStatus, ReviewResult, VaultOpenResult } from '../shared/ipc-types.js'
 
-/** Push the just-made commit, reporting whether it reached the remote. */
-async function trySync(vaultPath: string): Promise<ReviewResult> {
-  try {
-    await pushToRemote(vaultPath)
-    return { pushed: true }
-  } catch (err) {
-    return { pushed: false, reason: err instanceof Error ? err.message : String(err) }
+/** True when a remote is configured AND the branch tracks it. */
+async function isOnline(vaultPath: string): Promise<boolean> {
+  const s = await getSyncState(vaultPath)
+  return s.hasRemote && s.hasUpstream
+}
+
+function isPushReject(message: string): boolean {
+  const m = message.toLowerCase()
+  return m.includes('rejected') || m.includes('non-fast-forward') || m.includes('failed to push')
+}
+
+/**
+ * Atomic state mutation: pull latest → re-apply the logical change onto it →
+ * commit → push (retry on non-fast-forward rejection). applyFn re-reads the
+ * latest state from disk, writes the mutated file(s), and returns the in-repo
+ * paths it changed + the commit message.
+ *
+ * Conflicts are RETURNED (not thrown) so callers can surface a resync prompt.
+ * A non-conflict pull failure degrades to a local-only commit so the user's
+ * action is never lost.
+ */
+async function transact(
+  vaultPath: string,
+  applyFn: () => Promise<{ files: string[]; message: string }>,
+): Promise<ReviewResult> {
+  const online = await isOnline(vaultPath)
+  const { name, email } = await resolveVaultAuthor(vaultPath)
+  let lastErr = ''
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (online) {
+      try {
+        await pullRebase(vaultPath)
+      } catch (e) {
+        if (e instanceof SyncConflictError) {
+          // rebase conflict — surface it to the caller so the UI can prompt resync
+          return { pushed: false, conflict: true, reason: e.message }
+        }
+        // network/auth/other pull failure → degrade to offline: apply + commit locally
+        const { files, message } = await applyFn()
+        await stageAndCommit(vaultPath, files, message, email, name)
+        return { pushed: false, reason: e instanceof Error ? e.message : String(e) }
+      }
+    }
+    const { files, message } = await applyFn()
+    await stageAndCommit(vaultPath, files, message, email, name)
+    if (!online) return { pushed: false, reason: 'no remote configured' }
+    try {
+      await push(vaultPath)
+      return { pushed: true }
+    } catch (err) {
+      lastErr = err instanceof Error ? err.message : String(err)
+      if (!isPushReject(lastErr)) return { pushed: false, reason: lastErr }
+      // remote advanced between pull and push; discard our single commit and re-apply on newest
+      const ahead = (await getSyncState(vaultPath)).ahead
+      if (ahead === 1) {
+        await resetHardToUpstream(vaultPath)
+      } else {
+        // multiple unpushed commits diverged from remote — cannot safely rebase; signal caller
+        return { pushed: false, conflict: true, reason: 'local commits diverge from the remote — resync required' }
+      }
+    }
   }
+  return { pushed: false, reason: lastErr }
 }
 
 async function resolveVaultAuthor(vaultPath: string): Promise<{ name: string; email: string }> {
@@ -204,6 +268,9 @@ export async function openExistingVault(selected: string): Promise<VaultOpenResu
   // Migrate legacy docs-as-vault layout to index-by-path (best-effort)
   try { await migrateToIndex(vaultDir) } catch { /* best-effort */ }
   const manager = await VaultManager.open(vaultDir)
+  try {
+    if ((await getSyncState(vaultDir)).hasUpstream) await pullRebase(vaultDir)
+  } catch { /* offline/conflict surfaced later */ }
   await VaultManager.registerVault({
     name: manager.config.name,
     path: vaultDir,
@@ -213,7 +280,7 @@ export async function openExistingVault(selected: string): Promise<VaultOpenResu
 }
 
 export async function syncVault(vaultPath: string): Promise<void> {
-  await pullLatest(vaultPath)
+  await pullRebase(vaultPath)
 }
 
 export async function listFeatures(vaultPath: string): Promise<FeatureEntry[]> {
@@ -269,58 +336,67 @@ export async function reviewAction(
   action: ReviewAction,
   message?: string | null
 ): Promise<ReviewResult> {
-  const record = await readApproval(vaultPath, feature, type)
-  if (!record) throw new Error(`no approval record for ${feature}/${type}`)
-  const { name, email } = await resolveVaultAuthor(vaultPath)
-  // enforcement: when a required list exists, only its members may act
+  const { email } = await resolveVaultAuthor(vaultPath)
+  // enforcement: when a required list exists, only its members may act (before the transaction)
   let required: string[] = []
   try { required = getWorkflowForType(await readWorkflows(vaultPath), type).required_approvers } catch { required = [] }
   if (required.length && !required.includes(email)) {
     throw new Error(`only ${required.join(', ')} may review ${feature}/${type}`)
   }
-  const abs = resolveDocPath(vaultPath, await readManifest(vaultPath), feature, type)
-  let hash: string | undefined
-  try { hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { hash = undefined }
-  const now = new Date().toISOString()
-  let updated = applyReviewerAction(record, email, action, now, hash, message ?? null)
-  updated = { ...updated, status: deriveStatus(updated, required, hash ?? null) }
-  await writeApproval(vaultPath, updated)
-  await stageAndCommit(vaultPath, [approvalRelPath(feature, type)], `review: ${action} ${feature}/${type} by ${email}`, email, name)
-  return trySync(vaultPath)
+  return transact(vaultPath, async () => {
+    const record = await readApproval(vaultPath, feature, type)
+    if (!record) throw new Error(`no approval record for ${feature}/${type}`)
+    const abs = resolveDocPath(vaultPath, await readManifest(vaultPath), feature, type)
+    let hash: string | undefined
+    try { hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { hash = undefined }
+    let updated = applyReviewerAction(record, email, action, new Date().toISOString(), hash, message ?? null)
+    updated = { ...updated, status: deriveStatus(updated, required, hash ?? null) }
+    await writeApproval(vaultPath, updated)
+    return { files: [approvalRelPath(feature, type)], message: `review: ${action} ${feature}/${type} by ${email}` }
+  })
 }
 
 export async function readDocComments(vaultPath: string, feature: string, type: DocumentType): Promise<CommentsFile> {
   return readComments(vaultPath, feature, type)
 }
 
-async function commitComments(vaultPath: string, feature: string, type: DocumentType, file: CommentsFile, msg: string): Promise<CommentsFile> {
-  await writeComments(vaultPath, feature, type, file)
-  const { name, email } = await resolveVaultAuthor(vaultPath)
-  await stageAndCommit(vaultPath, [commentsRelPath(feature, type)], msg, email, name)
-  await trySync(vaultPath)
-  return file
-}
-
 export async function addCommentThread(vaultPath: string, feature: string, type: DocumentType, section: string, line: number, body: string): Promise<CommentsFile> {
   const { email } = await resolveVaultAuthor(vaultPath)
-  const now = new Date().toISOString()
-  const file = addThread(await readComments(vaultPath, feature, type), {
-    id: randomUUID(), section, line, resolved: false,
-    comments: [{ id: randomUUID(), by: email, at: now, body }],
+  let out!: CommentsFile
+  const result = await transact(vaultPath, async () => {
+    out = addThread(await readComments(vaultPath, feature, type), {
+      id: randomUUID(), section, line, resolved: false,
+      comments: [{ id: randomUUID(), by: email, at: new Date().toISOString(), body }],
+    })
+    await writeComments(vaultPath, feature, type, out)
+    return { files: [commentsRelPath(feature, type)], message: `comment: add thread on ${feature}/${type}` }
   })
-  return commitComments(vaultPath, feature, type, file, `comment: add thread on ${feature}/${type}`)
+  // If a sync conflict prevented the applyFn from running, out was never assigned — surface it.
+  if (result.conflict) throw new SyncConflictError(result.reason ?? 'sync conflict')
+  return out
 }
 
 export async function addCommentReply(vaultPath: string, feature: string, type: DocumentType, threadId: string, body: string): Promise<CommentsFile> {
   const { email } = await resolveVaultAuthor(vaultPath)
-  const now = new Date().toISOString()
-  const file = addReply(await readComments(vaultPath, feature, type), threadId, { id: randomUUID(), by: email, at: now, body })
-  return commitComments(vaultPath, feature, type, file, `comment: reply on ${feature}/${type}`)
+  let out!: CommentsFile
+  const result = await transact(vaultPath, async () => {
+    out = addReply(await readComments(vaultPath, feature, type), threadId, { id: randomUUID(), by: email, at: new Date().toISOString(), body })
+    await writeComments(vaultPath, feature, type, out)
+    return { files: [commentsRelPath(feature, type)], message: `comment: reply on ${feature}/${type}` }
+  })
+  if (result.conflict) throw new SyncConflictError(result.reason ?? 'sync conflict')
+  return out
 }
 
 export async function setCommentResolved(vaultPath: string, feature: string, type: DocumentType, threadId: string, resolved: boolean): Promise<CommentsFile> {
-  const file = setResolved(await readComments(vaultPath, feature, type), threadId, resolved)
-  return commitComments(vaultPath, feature, type, file, `comment: ${resolved ? 'resolve' : 'reopen'} thread on ${feature}/${type}`)
+  let out!: CommentsFile
+  const result = await transact(vaultPath, async () => {
+    out = setResolved(await readComments(vaultPath, feature, type), threadId, resolved)
+    await writeComments(vaultPath, feature, type, out)
+    return { files: [commentsRelPath(feature, type)], message: `comment: ${resolved ? 'resolve' : 'reopen'} thread on ${feature}/${type}` }
+  })
+  if (result.conflict) throw new SyncConflictError(result.reason ?? 'sync conflict')
+  return out
 }
 
 export async function readProjectClaudeMd(vaultPath: string): Promise<string | null> {
@@ -336,7 +412,8 @@ export async function readVaultWorkflows(vaultPath: string): Promise<VaultWorkfl
   return readWorkflows(vaultPath)
 }
 
-/** Write and commit the vault's workflows.json. */
+/** Write and commit the vault's workflows.json.
+ *  Commits locally only (no transaction/push) — the next mutation's pull integrates this change. */
 export async function writeVaultWorkflows(vaultPath: string, workflows: VaultWorkflows): Promise<void> {
   await fs.writeFile(path.join(vaultPath, 'workflows.json'), JSON.stringify(workflows, null, 2) + '\n')
   const { name, email } = await resolveVaultAuthor(vaultPath)
@@ -389,24 +466,25 @@ export async function getVaultStatus(vaultPath: string): Promise<GitStatus> {
 }
 
 /** Push to the remote, reporting success/failure for the UI. */
-export async function pushVault(vaultPath: string): Promise<{ ok: boolean; error?: string }> {
+export async function pushVault(vaultPath: string): Promise<{ ok: boolean; error?: string; errorKind?: GitErrorKind }> {
   try {
-    await pushToRemote(vaultPath)
+    await push(vaultPath)
     return { ok: true }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: msg, errorKind: classifyGitError(msg) }
   }
 }
 
-/** Set the upstream and push: `git push -u origin <branch>`. */
-export async function publishBranch(vaultPath: string): Promise<{ ok: boolean; error?: string }> {
+/** Set the upstream and push: `git push -u origin <branch>`.
+ *  Delegates to vault-core's hardened wrapper (GIT_TERMINAL_PROMPT=0, unsafe flags). */
+export async function publishBranch(vaultPath: string): Promise<{ ok: boolean; error?: string; errorKind?: GitErrorKind }> {
   try {
-    const git = simpleGit(vaultPath)
-    const branch = (await git.status()).current ?? 'main'
-    await git.push(['-u', 'origin', branch])
+    await corePublishBranch(vaultPath)
     return { ok: true }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: msg, errorKind: classifyGitError(msg) }
   }
 }
 
@@ -419,4 +497,37 @@ export async function getVaultRemote(vaultPath: string): Promise<string | null> 
   } catch {
     return null
   }
+}
+
+/** Add a remote and publish the current branch to it (sets upstream). */
+export async function connectRemote(
+  vaultPath: string,
+  url: string,
+): Promise<{ ok: boolean; error?: string; errorKind?: GitErrorKind }> {
+  try {
+    await addRemote(vaultPath, url)
+    await corePublishBranch(vaultPath)
+    return { ok: true }
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: msg, errorKind: classifyGitError(msg) }
+  }
+}
+
+/** Clone a remote vault and register it in the local registry. */
+export async function cloneVault(url: string, destDir: string): Promise<VaultOpenResult> {
+  await coreCloneVault(url, destDir)
+  let manager
+  try {
+    manager = await VaultManager.open(destDir)
+  } catch {
+    throw new Error('That repository is not a Signoff vault.')
+  }
+  await VaultManager.registerVault({ name: manager.config.name, path: destDir, last_opened: new Date().toISOString() })
+  return { name: manager.config.name, path: destDir }
+}
+
+/** Return the current sync state for a vault. */
+export async function getSyncStateBridge(vaultPath: string): Promise<SyncState> {
+  return getSyncState(vaultPath)
 }

@@ -122,7 +122,7 @@ export function App(): React.ReactElement {
   const [syncing, setSyncing] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [syncKey, setSyncKey] = useState(0)
-  const [toast, setToast] = useState<{ text: string; ok: boolean } | null>(null)
+  const [toast, setToast] = useState<{ text: string; ok: boolean; conflict?: boolean } | null>(null)
   const [autoSyncMs, setAutoSyncMs] = useState<number>(
     () => Number(localStorage.getItem('chuckle.autoSyncMs')) || 0
   )
@@ -181,6 +181,8 @@ export function App(): React.ReactElement {
         if (result.pushed) {
           setLastSyncedAt(Date.now())
           setToast({ text: 'Synced to GitHub', ok: true })
+        } else if (result.conflict === true) {
+          setToast({ text: "A teammate's changes overlap yours — Resync and redo your action.", ok: false, conflict: true })
         } else {
           setToast({ text: 'Saved — not synced yet', ok: false })
         }
@@ -244,7 +246,20 @@ export function App(): React.ReactElement {
           }`}
         >
           <span>{toast.text}</span>
-          {!toast.ok && (
+          {toast.conflict && (
+            <button
+              onClick={async () => {
+                setToast(null)
+                await window.chuckle.vault.sync(state.vaultPath)
+                refresh()
+                bump()
+              }}
+              className="underline underline-offset-2 font-medium"
+            >
+              Resync
+            </button>
+          )}
+          {!toast.ok && !toast.conflict && (
             <button onClick={() => setShowGit(true)} className="underline underline-offset-2 font-medium">
               Open source control
             </button>
