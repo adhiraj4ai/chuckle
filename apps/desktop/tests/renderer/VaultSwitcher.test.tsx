@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { VaultSwitcher } from '@renderer/components/VaultSwitcher'
 import type { VaultInfo } from '@shared/ipc-types'
 
@@ -47,21 +47,58 @@ describe('VaultSwitcher', () => {
     await waitFor(() => screen.getByText(/no projects/i))
   })
 
-  it('picks a folder and sets up a vault named after it on "Set up in a project"', async () => {
+  it('two-step setup: picks folder, shows form, calls create with approvers', async () => {
     vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
     vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/new/path')
     vi.mocked(window.chuckle.vault.create).mockResolvedValue({
       name: 'path',
       path: '/new/path/.signoff',
     })
+    vi.mocked(window.chuckle.vault.onSetupProgress).mockReturnValue(() => {})
     const onSelected = vi.fn()
     render(<VaultSwitcher onVaultSelected={onSelected} />)
     await waitFor(() => screen.getByText(/set up in a project/i))
     fireEvent.click(screen.getByText(/set up in a project/i))
-    // No modal — the folder is picked and the name defaults to its basename.
     await waitFor(() => expect(window.chuckle.vault.selectDirectory).toHaveBeenCalled())
-    await waitFor(() => expect(window.chuckle.vault.create).toHaveBeenCalledWith('/new/path', 'path'))
+    // form should appear with an approvers input
+    await waitFor(() => expect(screen.getByRole('textbox', { name: /approvers/i })).toBeInTheDocument())
+    fireEvent.change(screen.getByRole('textbox', { name: /approvers/i }), {
+      target: { value: 'lead@o.c' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }))
+    await waitFor(() =>
+      expect(window.chuckle.vault.create).toHaveBeenCalledWith('/new/path', 'path', ['lead@o.c'])
+    )
     await waitFor(() => expect(onSelected).toHaveBeenCalledWith('/new/path/.signoff', 'path'))
+  })
+
+  it('shows progress bar when onSetupProgress fires done/total', async () => {
+    let capturedCb: ((p: { done: number; total: number }) => void) | null = null
+    vi.mocked(window.chuckle.vault.list).mockResolvedValue([])
+    vi.mocked(window.chuckle.vault.selectDirectory).mockResolvedValue('/new/path')
+    vi.mocked(window.chuckle.vault.create).mockImplementation(
+      () => new Promise(() => { /* never resolves — keeps busy state */ })
+    )
+    vi.mocked(window.chuckle.vault.onSetupProgress).mockImplementation((cb) => {
+      capturedCb = cb
+      return () => {}
+    })
+    render(<VaultSwitcher onVaultSelected={() => {}} />)
+    await waitFor(() => screen.getByText(/set up in a project/i))
+    fireEvent.click(screen.getByText(/set up in a project/i))
+    await waitFor(() => expect(window.chuckle.vault.selectDirectory).toHaveBeenCalled())
+    await waitFor(() => screen.getByRole('button', { name: /^create$/i }))
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }))
+    // simulate progress event
+    act(() => {
+      capturedCb!({ done: 2, total: 5 })
+    })
+    await waitFor(() => {
+      const bar = screen.getByRole('progressbar')
+      expect(bar).toHaveAttribute('aria-valuenow', '2')
+      expect(bar).toHaveAttribute('aria-valuemax', '5')
+    })
+    expect(screen.getByText(/2 of 5/i)).toBeInTheDocument()
   })
 
   it('opens existing vault on "Open"', async () => {
