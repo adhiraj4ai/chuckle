@@ -47,6 +47,7 @@
         "AppImage",
         "deb"
       ],
+      "executableName": "signoff",
       "category": "Development",
       "icon": "build/icon.png",
       "maintainer": "Rajan Adhikari <adhiraj.rsh@gmail.com>"
