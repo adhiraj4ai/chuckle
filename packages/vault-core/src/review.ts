@@ -42,10 +42,18 @@ export function applyReviewerAction(
   };
 }
 
-/** Roll the per-reviewer statuses up to a single document status. */
+/**
+ * Roll the per-reviewer statuses up to a single document status.
+ *
+ * `requiredApprovers` is the configured required-approver set, or `null` when
+ * that set is UNKNOWN (e.g. the workflow config could not be read/parsed). When
+ * the required set is unknown we MUST fail closed: never return "approved",
+ * because we cannot prove the policy was satisfied. This is the security gate —
+ * a missing/corrupt workflows.json must not downgrade to "any reviewer wins".
+ */
 export function deriveStatus(
   record: ApprovalRecord,
-  requiredApprovers: string[],
+  requiredApprovers: string[] | null,
   currentHash: string | null
 ): ApprovalStatus {
   const reviewers = record.reviewers ?? {};
@@ -54,9 +62,14 @@ export function deriveStatus(
     s.status === "approved" && (!currentHash || s.content_hash === currentHash);
 
   // changes requested by any required reviewer wins
-  if (requiredApprovers.some((e) => reviewers[e]?.status === "changes_requested")) return "rejected";
+  if (requiredApprovers !== null && requiredApprovers.some((e) => reviewers[e]?.status === "changes_requested")) {
+    return "rejected";
+  }
 
-  if (requiredApprovers.length > 0) {
+  if (requiredApprovers === null) {
+    // Required set unknown — fail closed. The doc can never be "approved" here;
+    // at most reflect that review is underway.
+  } else if (requiredApprovers.length > 0) {
     if (requiredApprovers.every((e) => reviewers[e] && approvedFresh(reviewers[e]))) return "approved";
   } else if (entries.some(([, s]) => approvedFresh(s))) {
     return "approved";

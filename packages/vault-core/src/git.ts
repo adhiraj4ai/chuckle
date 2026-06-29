@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { simpleGit, CheckRepoActions, type SimpleGit } from "simple-git";
 
 export class SyncConflictError extends Error {
@@ -5,6 +7,54 @@ export class SyncConflictError extends Error {
     super(message);
     this.name = "SyncConflictError";
   }
+}
+
+/**
+ * Validate a remote URL before handing it to git. Renderer-supplied URLs are
+ * untrusted: a value starting with "-" would be parsed by git as an OPTION
+ * (e.g. "--upload-pack=touch /tmp/pwned") rather than a positional URL —
+ * classic argument injection. We reject leading "-" outright and require the
+ * value to look like one of the supported transports. Returns the URL on
+ * success; throws a clear Error otherwise.
+ */
+export function validateRemoteUrl(url: string): string {
+  if (typeof url !== "string" || url.trim().length === 0) {
+    throw new Error("invalid remote URL: must be a non-empty string");
+  }
+  const u = url.trim();
+  if (u.startsWith("-")) {
+    throw new Error(`invalid remote URL "${url}": must not begin with "-" (option injection)`);
+  }
+  const ok =
+    /^https?:\/\//i.test(u) ||           // http(s)://
+    /^ssh:\/\//i.test(u) ||              // ssh://
+    /^git:\/\//i.test(u) ||              // git://
+    /^file:\/\//i.test(u) ||             // file://
+    /^[^\s/]+@[^\s/]+:.+/.test(u) ||     // scp-style: git@host:path
+    path.isAbsolute(u);                  // local absolute path
+  if (!ok) {
+    throw new Error(
+      `invalid remote URL "${url}": only http(s)://, ssh://, git://, file://, scp-style (user@host:path), or absolute local paths are allowed`
+    );
+  }
+  return u;
+}
+
+/**
+ * True when a rebase is currently in progress in `repoPath` (git leaves a
+ * .git/rebase-merge or .git/rebase-apply directory behind during a rebase, and
+ * until it is aborted/continued). Lets callers detect a stuck rebase and clean
+ * up rather than silently proceeding on a half-applied tree.
+ */
+export async function isRebaseInProgress(repoPath: string): Promise<boolean> {
+  for (const dir of ["rebase-merge", "rebase-apply"]) {
+    const exists = await fs
+      .access(path.join(repoPath, ".git", dir))
+      .then(() => true)
+      .catch(() => false);
+    if (exists) return true;
+  }
+  return false;
 }
 
 export type GitErrorKind = "auth" | "conflict" | "network" | "other";
@@ -111,10 +161,12 @@ export async function getRemoteUrl(vaultPath: string): Promise<string | null> {
 }
 
 export async function addRemote(vaultPath: string, url: string, name = "origin"): Promise<void> {
+  const safeUrl = validateRemoteUrl(url);
   const g = simpleGit(vaultPath);
   const remotes = await g.getRemotes();
-  if (remotes.some((r) => r.name === name)) await g.remote(["set-url", name, url]);
-  else await g.addRemote(name, url);
+  // "--" ends option parsing so a "-"-leading URL can never be read as a flag.
+  if (remotes.some((r) => r.name === name)) await g.remote(["set-url", name, "--", safeUrl]);
+  else await g.raw(["remote", "add", name, "--", safeUrl]);
 }
 
 export async function getCurrentBranch(vaultPath: string): Promise<string> {
@@ -137,8 +189,20 @@ export async function pullRebase(vaultPath: string): Promise<void> {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (classifyGitError(msg) === "conflict") {
-      try { await simpleGit(vaultPath).raw(["rebase", "--abort"]); } catch { /* nothing to abort */ }
-      throw new SyncConflictError(msg);
+      // Abort the half-applied rebase. Only swallow the abort error when there
+      // was in fact no rebase to abort; otherwise surface it on the thrown
+      // SyncConflictError so a genuinely-stuck rebase is not hidden.
+      let abortError: string | null = null;
+      try {
+        await simpleGit(vaultPath).raw(["rebase", "--abort"]);
+      } catch (abortErr) {
+        if (await isRebaseInProgress(vaultPath)) {
+          abortError = abortErr instanceof Error ? abortErr.message : String(abortErr);
+        }
+      }
+      throw new SyncConflictError(
+        abortError ? `${msg}; rebase --abort failed: ${abortError}` : msg
+      );
     }
     throw err;
   }
@@ -155,9 +219,12 @@ export async function resetHardToUpstream(vaultPath: string): Promise<void> {
 }
 
 export async function cloneVault(url: string, destDir: string): Promise<void> {
+  const safeUrl = validateRemoteUrl(url);
+  // "--" ends option parsing: git clone -- <url> <dir>, so a "-"-leading URL
+  // cannot be interpreted as a flag (e.g. --upload-pack=…).
   await simpleGit({ unsafe: UNSAFE_FLAGS })
     .env({ ...process.env, GIT_TERMINAL_PROMPT: "0" })
-    .clone(url, destDir);
+    .raw(["clone", "--", safeUrl, destDir]);
 }
 
 export async function getSyncState(vaultPath: string): Promise<SyncState> {

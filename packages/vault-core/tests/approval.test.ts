@@ -62,6 +62,16 @@ describe("readApproval", () => {
     expect(result?.status).toBe("pending");
     expect(result?.history).toHaveLength(1);
   });
+
+  it("throws a clear error on a corrupt approval file", async () => {
+    await fs.writeFile(
+      path.join(tmpDir, "approvals", "user-auth.spec.json"),
+      "{ half-written json"
+    );
+    await expect(readApproval(tmpDir, "user-auth", "spec")).rejects.toThrow(
+      /corrupt JSON at .*user-auth\.spec\.json/
+    );
+  });
 });
 
 describe("writeApproval", () => {
@@ -73,6 +83,9 @@ describe("writeApproval", () => {
     );
     const parsed = JSON.parse(raw);
     expect(parsed.status).toBe("pending");
+    // atomic write leaves no temp file behind
+    const left = (await fs.readdir(path.join(tmpDir, "approvals"))).filter((f) => f.includes(".tmp"));
+    expect(left).toEqual([]);
   });
 });
 
@@ -105,8 +118,15 @@ describe("getApprovalStatus", () => {
   });
 
   it("returns approved status with approver details when a reviewer has approved", async () => {
-    // Drive the reviewers map: start_review then approve (no required_approvers in this
-    // bare-tmpDir setup, so any approver in the map derives "approved").
+    // Workflow legitimately has zero required approvers, so any approver in the
+    // map derives "approved".
+    await fs.writeFile(
+      path.join(tmpDir, "workflows.json"),
+      JSON.stringify({
+        spec: { required_approvers: [], min_approvals: 1 },
+        plan: { required_approvers: [], min_approvals: 1 },
+      })
+    );
     let rec = applyReviewerAction(baseRecord, "arch@org.com", "start_review", "2026-06-27T11:00:00Z");
     rec = applyReviewerAction(rec, "arch@org.com", "approve", "2026-06-27T12:00:00Z", "hash-abc");
     await writeApproval(tmpDir, rec);
@@ -114,5 +134,23 @@ describe("getApprovalStatus", () => {
     expect(result.status).toBe("approved");
     expect(result.approved_by).toBe("arch@org.com");
     expect(result.approved_at).toBe("2026-06-27T12:00:00Z");
+  });
+
+  it("FAILS CLOSED: a missing workflows.json must not let any reviewer's approval read as approved", async () => {
+    // No workflows.json at all → required-approver set is UNKNOWN.
+    let rec = applyReviewerAction(baseRecord, "arch@org.com", "start_review", "2026-06-27T11:00:00Z");
+    rec = applyReviewerAction(rec, "arch@org.com", "approve", "2026-06-27T12:00:00Z", "hash-abc");
+    await writeApproval(tmpDir, rec);
+    const result = await getApprovalStatus(tmpDir, "user-auth", "spec");
+    expect(result.status).not.toBe("approved");
+  });
+
+  it("FAILS CLOSED: a corrupt workflows.json must not let an approval read as approved", async () => {
+    await fs.writeFile(path.join(tmpDir, "workflows.json"), "{ this is : not json");
+    let rec = applyReviewerAction(baseRecord, "arch@org.com", "start_review", "2026-06-27T11:00:00Z");
+    rec = applyReviewerAction(rec, "arch@org.com", "approve", "2026-06-27T12:00:00Z", "hash-abc");
+    await writeApproval(tmpDir, rec);
+    const result = await getApprovalStatus(tmpDir, "user-auth", "spec");
+    expect(result.status).not.toBe("approved");
   });
 });

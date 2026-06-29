@@ -10,12 +10,15 @@ import type {
 import { deriveStatus } from "./review.js";
 import { readWorkflows, getWorkflowForType } from "./workflow.js";
 import { readManifest, resolveDocPath, hashContent } from "./manifest.js";
+import { validateFeatureName } from "./feature.js";
+import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
 export function approvalFilePath(
   vaultPath: string,
   feature: string,
   type: DocumentType
 ): string {
+  validateFeatureName(feature);
   return path.join(vaultPath, "approvals", `${feature}.${type}.json`);
 }
 
@@ -25,13 +28,14 @@ export async function readApproval(
   type: DocumentType
 ): Promise<ApprovalRecord | null> {
   const filePath = approvalFilePath(vaultPath, feature, type);
+  let raw: string;
   try {
-    const raw = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(raw) as ApprovalRecord;
+    raw = await fs.readFile(filePath, "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
+  return parseJsonOrThrow<ApprovalRecord>(raw, filePath);
 }
 
 export async function writeApproval(
@@ -39,8 +43,7 @@ export async function writeApproval(
   record: ApprovalRecord
 ): Promise<void> {
   const filePath = approvalFilePath(vaultPath, record.feature, record.type);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(record, null, 2) + "\n", "utf-8");
+  await writeJsonAtomic(filePath, record);
 }
 
 const actionToStatus: Record<ApprovalHistoryEntry["action"], ApprovalStatus> = {
@@ -71,11 +74,13 @@ export async function getApprovalStatus(
   const record = await readApproval(vaultPath, feature, type);
   if (!record) return { status: "not_found" };
 
-  let required: string[] = [];
+  // null = required-approver set is UNKNOWN (workflow missing/corrupt). Fail
+  // closed: deriveStatus must never return "approved" when this is null.
+  let required: string[] | null = null;
   try {
     required = getWorkflowForType(await readWorkflows(vaultPath), type).required_approvers;
   } catch {
-    required = [];
+    required = null;
   }
   let currentHash: string | null = null;
   try {

@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { DocumentType } from "./types.js";
+import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
 export interface FeatureDocs {
   spec?: string;
@@ -21,22 +22,22 @@ export function projectRootOf(vaultPath: string): string {
 }
 
 export async function readManifest(vaultPath: string): Promise<Manifest> {
+  const filePath = path.join(vaultPath, manifestRelPath);
+  let raw: string;
   try {
-    const raw = await fs.readFile(path.join(vaultPath, manifestRelPath), "utf-8");
-    const parsed = JSON.parse(raw) as Manifest;
-    return { version: 1, features: parsed.features ?? {} };
+    raw = await fs.readFile(filePath, "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return { version: 1, features: {} };
     throw err;
   }
+  // A corrupt manifest must fail loudly, not silently degrade to an empty
+  // index (which would lose every feature/approval mapping).
+  const parsed = parseJsonOrThrow<Manifest>(raw, filePath);
+  return { version: 1, features: parsed.features ?? {} };
 }
 
 export async function writeManifest(vaultPath: string, manifest: Manifest): Promise<void> {
-  await fs.writeFile(
-    path.join(vaultPath, manifestRelPath),
-    JSON.stringify(manifest, null, 2) + "\n",
-    "utf-8"
-  );
+  await writeJsonAtomic(path.join(vaultPath, manifestRelPath), manifest);
 }
 
 export function getFeatureDoc(m: Manifest, feature: string, type: DocumentType): string | null {

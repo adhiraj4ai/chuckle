@@ -48,7 +48,8 @@ describe("migrateToIndex", () => {
       status: "approved", history: [{ action: "approved", by: "d@o.c", at: "t", message: null }],
     });
     const res = await migrateToIndex(vaultPath);
-    expect(res.unresolved).toContain("orphan/spec");
+    // A vault-copy fallback was set, so this feature is NOT unresolved.
+    expect(res.unresolved).not.toContain("orphan/spec");
     const m = await readManifest(vaultPath);
     expect(getFeatureDoc(m, "orphan", "spec")).toBe(".signoff/specs/orphan.md");
     expect((await fs.stat(path.join(vaultPath, "specs", "orphan.md"))).isFile()).toBe(true);
@@ -64,6 +65,56 @@ describe("migrateToIndex", () => {
     expect(res.unresolved).toContain("ghost/spec");
     const m = await readManifest(vaultPath);
     expect(getFeatureDoc(m, "ghost", "spec")).toBeNull();
+  });
+
+  it("classifies 'capacity-planning-design.md' as a spec, not a plan (anchored match)", async () => {
+    await fs.writeFile(path.join(vaultPath, "specs", "capacity-planning.md"), "# old\n");
+    await writeApproval(vaultPath, {
+      document: "spec.md", feature: "capacity-planning", type: "spec", workflow: "spec",
+      status: "pending", history: [{ action: "submitted", by: "d@o.c", at: "t", message: null }],
+    });
+    await fs.mkdir(path.join(projectRoot, "docs", "specs"), { recursive: true });
+    await fs.writeFile(
+      path.join(projectRoot, "docs", "specs", "2026-06-27-capacity-planning-design.md"),
+      "# real\n"
+    );
+
+    await migrateToIndex(vaultPath);
+    const m = await readManifest(vaultPath);
+    // Must be mapped under "spec", not "plan".
+    expect(getFeatureDoc(m, "capacity-planning", "spec")).toBe(
+      "docs/specs/2026-06-27-capacity-planning-design.md"
+    );
+    expect(getFeatureDoc(m, "capacity-planning", "plan")).toBeNull();
+  });
+
+  it("classifies a real plan ('user-auth-plan.md') as a plan", async () => {
+    await fs.mkdir(path.join(projectRoot, "docs"), { recursive: true });
+    await fs.writeFile(path.join(projectRoot, "docs", "2026-06-27-user-auth-plan.md"), "# plan\n");
+    await migrateToIndex(vaultPath);
+    const m = await readManifest(vaultPath);
+    expect(getFeatureDoc(m, "user-auth", "plan")).toBe("docs/2026-06-27-user-auth-plan.md");
+    expect(getFeatureDoc(m, "user-auth", "spec")).toBeNull();
+  });
+
+  it("does NOT delete the vault copy when the mapped project file is missing on disk", async () => {
+    // Vault copy exists. Manifest will map the feature to a project path that
+    // does not actually exist (stale entry) — the copy must be preserved.
+    await fs.writeFile(path.join(vaultPath, "specs", "user-auth.md"), "# vault copy\n");
+    await writeApproval(vaultPath, {
+      document: "spec.md", feature: "user-auth", type: "spec", workflow: "spec",
+      status: "approved", history: [{ action: "approved", by: "d@o.c", at: "t", message: null }],
+    });
+    // Pre-seed the manifest with a non-.signoff mapping to a NON-existent file.
+    await fs.writeFile(
+      path.join(vaultPath, "index.json"),
+      JSON.stringify({ version: 1, features: { "user-auth": { spec: "docs/specs/gone.md" } } }) + "\n"
+    );
+
+    await migrateToIndex(vaultPath);
+
+    // The mapped project file does not exist, so the vault copy must survive.
+    expect((await fs.stat(path.join(vaultPath, "specs", "user-auth.md"))).isFile()).toBe(true);
   });
 
   it("is a no-op on an already-migrated vault", async () => {
@@ -82,7 +133,8 @@ describe("migrateToIndex", () => {
     });
     const first = await migrateToIndex(vaultPath);
     expect(first.migrated).toBe(true);
-    expect(first.unresolved).toContain("orphan/spec");
+    // Fallback copy was set, so orphan/spec is resolved (to the copy), not unresolved.
+    expect(first.unresolved).not.toContain("orphan/spec");
 
     // Second call: index.json now exists; the only copy in specs/ is the
     // .signoff/specs/orphan.md fallback already recorded in the manifest.

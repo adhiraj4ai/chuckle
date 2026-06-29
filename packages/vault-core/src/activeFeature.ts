@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
 export interface ActiveFeature {
   feature: string;
@@ -20,9 +21,7 @@ export async function writeActiveFeature(
     vaultPath: data.vaultPath,
     publishedAt: new Date().toISOString(),
   };
-  const filePath = pointerPath(projectRoot);
-  await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, JSON.stringify(record, null, 2) + "\n");
+  await writeJsonAtomic(pointerPath(projectRoot), record);
   return record;
 }
 
@@ -36,7 +35,7 @@ export async function readActiveFeature(
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
-  const parsed = JSON.parse(raw) as Partial<ActiveFeature>;
+  const parsed = parseJsonOrThrow<Partial<ActiveFeature>>(raw, pointerPath(projectRoot));
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     throw new Error("active-feature.json is not an object");
   }

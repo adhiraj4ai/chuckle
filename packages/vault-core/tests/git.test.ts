@@ -3,6 +3,10 @@ import {
   initVaultRepo,
   stageAndCommit,
   getHeadSha,
+  validateRemoteUrl,
+  isRebaseInProgress,
+  addRemote,
+  cloneVault,
 } from "../src/git.js";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -62,6 +66,61 @@ describe("stageAndCommit", () => {
 
     const head = await getHeadSha(tmpDir);
     expect(head).toBe(sha);
+  });
+});
+
+describe("validateRemoteUrl (option-injection defense)", () => {
+  it.each([
+    "https://github.com/me/repo.git",
+    "http://example.com/r.git",
+    "ssh://git@host/r.git",
+    "git://host/r.git",
+    "file:///srv/repo.git",
+    "git@github.com:me/repo.git",
+    "/abs/local/repo",
+  ])("accepts %j", (url) => {
+    expect(validateRemoteUrl(url)).toBe(url);
+  });
+
+  it("rejects a --upload-pack option-injection URL", () => {
+    expect(() => validateRemoteUrl("--upload-pack=touch /tmp/pwned")).toThrow(/option injection/);
+  });
+
+  it.each(["-x", "--foo", "", "   ", "not a url", "relative/path"])(
+    "rejects %j",
+    (url) => {
+      expect(() => validateRemoteUrl(url)).toThrow();
+    }
+  );
+
+  it("addRemote rejects an option-injection URL", async () => {
+    await initVaultRepo(tmpDir);
+    await expect(addRemote(tmpDir, "--upload-pack=evil")).rejects.toThrow(/option injection/);
+  });
+
+  it("cloneVault rejects an option-injection URL", async () => {
+    await expect(cloneVault("--upload-pack=evil", path.join(tmpDir, "dest"))).rejects.toThrow(
+      /option injection/
+    );
+  });
+});
+
+describe("isRebaseInProgress", () => {
+  it("is false for a fresh repo", async () => {
+    await initVaultRepo(tmpDir);
+    expect(await isRebaseInProgress(tmpDir)).toBe(false);
+  });
+
+  it("is true when a rebase-merge dir is present", async () => {
+    await initVaultRepo(tmpDir);
+    await fs.mkdir(path.join(tmpDir, ".git", "rebase-merge"), { recursive: true });
+    expect(await isRebaseInProgress(tmpDir)).toBe(true);
+  });
+
+  it("is true when a rebase-apply dir is present", async () => {
+    await initVaultRepo(tmpDir);
+    await fs.mkdir(path.join(tmpDir, ".git", "rebase-apply"), { recursive: true });
+    expect(await isRebaseInProgress(tmpDir)).toBe(true);
   });
 });
 

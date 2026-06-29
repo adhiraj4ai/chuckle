@@ -71,7 +71,16 @@ export async function migrateVault(vaultPath: string): Promise<void> {
 
 function classifyDoc(relPath: string): DocumentType {
   const p = relPath.toLowerCase();
-  if (/(^|\/)plans?(\/|$)/.test(p) || /plan/.test(path.basename(p))) return "plan";
+  const base = path.basename(p);
+  // A "plan" is identified by a /plan(s)/ path segment, or a basename whose
+  // name ends in "-plan" (e.g. "user-auth-plan.md") or is exactly "plan.md".
+  // Anchored so substrings like "capacity-planning-design.md" are NOT plans.
+  if (
+    /(^|\/)plans?(\/|$)/.test(p) ||
+    /(^|-)plan\.md$/.test(base)
+  ) {
+    return "plan";
+  }
   return "spec";
 }
 
@@ -178,9 +187,12 @@ export async function migrateToIndex(
     const copyRel = `.signoff/${type === "spec" ? "specs" : "plans"}/${feature}.md`;
     const copyAbs = path.join(projectRoot, copyRel);
     if (await fs.access(copyAbs).then(() => true).catch(() => false)) {
+      // A vault-copy fallback was set — it IS resolved (to the copy). Only the
+      // no-fallback case below is truly unresolved.
       manifest = setFeatureDoc(manifest, feature, type, copyRel);
+    } else {
+      unresolved.push(`${feature}/${type}`);
     }
-    unresolved.push(`${feature}/${type}`);
   }
 
   // 3. Remove vault copies that were matched to project docs (not the fallbacks).
@@ -196,8 +208,16 @@ export async function migrateToIndex(
       if (!f.endsWith(".md")) continue;
       const feature = f.slice(0, -3);
       const rel = getFeatureDoc(manifest, feature, type);
+      // Only delete the vault copy once we have CONFIRMED the mapped project
+      // file actually exists on disk for this exact feature/type. Deleting
+      // based on the manifest entry alone risks data loss if the mapped path is
+      // stale/missing — the vault copy is then the only surviving content.
       if (rel && !rel.startsWith(".signoff/")) {
-        await fs.rm(path.join(dir, f), { force: true });
+        const mappedAbs = path.join(projectRoot, rel);
+        const mappedExists = await fs.access(mappedAbs).then(() => true).catch(() => false);
+        if (mappedExists) {
+          await fs.rm(path.join(dir, f), { force: true });
+        }
       }
     }
     // drop the dir if now empty

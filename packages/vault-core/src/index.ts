@@ -16,8 +16,11 @@ export type {
   CheckApprovalResult,
 } from "./types.js";
 
-// Feature inference
-export { inferFeatureName } from "./feature.js";
+// Feature inference + validation
+export { inferFeatureName, validateFeatureName } from "./feature.js";
+
+// Filesystem helpers (atomic writes, guarded JSON parse)
+export { writeFileAtomic, writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
 // Reviewer workflow
 export type { ReviewAction } from "./review.js";
@@ -72,7 +75,7 @@ export {
   initVaultRepo, stageAndCommit, pullLatest, pushToRemote, getHeadSha,
   SyncConflictError, classifyGitError, hasRemote, getRemoteUrl, addRemote,
   getCurrentBranch, publishBranch, fetch, pullRebase, push, resetHardToUpstream,
-  cloneVault, getSyncState,
+  cloneVault, getSyncState, isRebaseInProgress, validateRemoteUrl,
 } from "./git.js";
 export type { GitErrorKind, SyncState } from "./git.js";
 

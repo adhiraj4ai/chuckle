@@ -74,4 +74,15 @@ describe("manifest", () => {
     expect(hashContent("hello")).not.toBe(hashContent("world"));
     expect(hashContent("hello")).toMatch(/^[0-9a-f]{64}$/);
   });
+
+  it("throws a clear error on a corrupt index.json (does NOT silently return empty)", async () => {
+    await fs.writeFile(path.join(vaultPath, "index.json"), "{ half-written");
+    await expect(readManifest(vaultPath)).rejects.toThrow(/corrupt JSON at .*index\.json/);
+  });
+
+  it("writeManifest is atomic — leaves no temp file behind", async () => {
+    await writeManifest(vaultPath, { version: 1, features: { f: { spec: "docs/a.md" } } });
+    const left = (await fs.readdir(vaultPath)).filter((f) => f.includes(".tmp"));
+    expect(left).toEqual([]);
+  });
 });
