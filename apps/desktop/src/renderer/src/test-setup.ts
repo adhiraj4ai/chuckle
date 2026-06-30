@@ -41,6 +41,13 @@ const mockSignoff: SignoffAPI = {
   },
   features: {
     list: vi.fn(),
+    setCategory: vi.fn(),
+    setTags: vi.fn(),
+  },
+  categories: {
+    list: vi.fn().mockResolvedValue([]),
+    upsert: vi.fn(),
+    remove: vi.fn(),
   },
   document: {
     read: vi.fn(),

@@ -34,6 +34,11 @@ import {
   connectRemote,
   cloneVault,
   getSyncStateBridge,
+  listCategoriesBridge,
+  upsertCategoryBridge,
+  removeCategoryBridge,
+  setFeatureCategoryBridge,
+  setFeatureTagsBridge,
 } from './vault-bridge.js'
 import {
   isAllowedExternalUrl,
@@ -117,6 +122,11 @@ function registerIpcHandlers(): void {
     return { ok: true }
   })
   ipcMain.handle('features:list', (_e, { vaultPath }) => listFeatures(vaultPath))
+  ipcMain.handle('categories:list', (_e, { vaultPath }) => listCategoriesBridge(vaultPath))
+  ipcMain.handle('categories:upsert', (_e, { vaultPath, category }) => upsertCategoryBridge(vaultPath, category))
+  ipcMain.handle('categories:remove', (_e, { vaultPath, id }) => removeCategoryBridge(vaultPath, id))
+  ipcMain.handle('feature:set-category', (_e, { vaultPath, feature, categoryId }) => setFeatureCategoryBridge(vaultPath, feature, categoryId))
+  ipcMain.handle('feature:set-tags', (_e, { vaultPath, feature, tags }) => setFeatureTagsBridge(vaultPath, feature, tags))
   ipcMain.handle('document:read', (_e, { vaultPath, feature, type }) => readDocument(vaultPath, feature, type))
   ipcMain.handle('document:write', (_e, { vaultPath, feature, type, content }) =>
     writeDocument(vaultPath, feature, type, content)

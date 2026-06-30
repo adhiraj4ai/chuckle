@@ -27,6 +27,15 @@ const api: SignoffAPI = {
   },
   features: {
     list: (vaultPath) => ipcRenderer.invoke('features:list', { vaultPath }),
+    setCategory: (vaultPath, feature, categoryId) =>
+      ipcRenderer.invoke('feature:set-category', { vaultPath, feature, categoryId }),
+    setTags: (vaultPath, feature, tags) =>
+      ipcRenderer.invoke('feature:set-tags', { vaultPath, feature, tags }),
+  },
+  categories: {
+    list: (vaultPath) => ipcRenderer.invoke('categories:list', { vaultPath }),
+    upsert: (vaultPath, category) => ipcRenderer.invoke('categories:upsert', { vaultPath, category }),
+    remove: (vaultPath, id) => ipcRenderer.invoke('categories:remove', { vaultPath, id }),
   },
   document: {
     read: (vaultPath, feature, type) =>
