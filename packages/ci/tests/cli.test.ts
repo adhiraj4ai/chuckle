@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 import { VaultManager, readApproval, writeApproval, applyReviewerAction, hashContent } from "@signoff/vault-core";
-import { cmdCheck } from "../src/cli.js";
+import { cmdCheck, cmdCloneVault } from "../src/cli.js";
 
 let project: string;
 beforeEach(async () => { project = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-cli-")); });
@@ -43,5 +43,12 @@ describe("cmdCheck exit codes", () => {
     await approvedPlan();
     const code = await cmdCheck([], { SIGNOFF_BRANCH: "feat/x", SIGNOFF_TYPE: "plan" }, project);
     expect(code).toBe(0);
+  });
+});
+
+describe("cmdCloneVault exit codes", () => {
+  it("cmdCloneVault returns 2 on missing url/dest", async () => {
+    const code = await cmdCloneVault([], {});
+    expect(code).toBe(2);
   });
 });
