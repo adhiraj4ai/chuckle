@@ -2,15 +2,19 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { DocumentType } from "./types.js";
+import type { Category } from "./categories.js";
 import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
 export interface FeatureDocs {
   spec?: string;
   plan?: string;
+  category?: string;   // Category.id; absent ⇒ Uncategorized
+  tags?: string[];     // normalized free-form labels
 }
 
 export interface Manifest {
-  version: 1;
+  version: 2;
+  categories: Category[];
   features: Record<string, FeatureDocs>;
 }
 
@@ -27,13 +31,18 @@ export async function readManifest(vaultPath: string): Promise<Manifest> {
   try {
     raw = await fs.readFile(filePath, "utf-8");
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { version: 1, features: {} };
+    if ((err as NodeJS.ErrnoException).code === "ENOENT")
+      return { version: 2, categories: [], features: {} };
     throw err;
   }
-  // A corrupt manifest must fail loudly, not silently degrade to an empty
-  // index (which would lose every feature/approval mapping).
-  const parsed = parseJsonOrThrow<Manifest>(raw, filePath);
-  return { version: 1, features: parsed.features ?? {} };
+  // A corrupt manifest must fail loudly, not silently degrade to an empty index.
+  const parsed = parseJsonOrThrow<Partial<Manifest>>(raw, filePath);
+  // Read-time, non-destructive v1 -> v2 migration: persist v2 on the next write.
+  return {
+    version: 2,
+    categories: parsed.categories ?? [],
+    features: parsed.features ?? {},
+  };
 }
 
 export async function writeManifest(vaultPath: string, manifest: Manifest): Promise<void> {

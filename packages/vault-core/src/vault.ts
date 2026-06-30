@@ -72,7 +72,7 @@ export class VaultManager {
 
     await fs.writeFile(path.join(vaultPath, "config.json"), JSON.stringify(config, null, 2) + "\n");
     await fs.writeFile(path.join(vaultPath, "workflows.json"), JSON.stringify(DEFAULT_WORKFLOWS, null, 2) + "\n");
-    await writeManifest(vaultPath, { version: 1, features: {} });
+    await writeManifest(vaultPath, { version: 2, categories: [], features: {} });
     await fs.writeFile(
       path.join(vaultPath, "README.md"),
       `# ${name} — Signoff Vault\n\nApproval state for this project's specs & plans.\n`

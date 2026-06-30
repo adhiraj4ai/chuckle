@@ -30,17 +30,17 @@ afterEach(async () => {
 describe("manifest", () => {
   it("returns an empty manifest when index.json is absent", async () => {
     const m = await readManifest(vaultPath);
-    expect(m).toEqual({ version: 1, features: {} });
+    expect(m).toEqual({ version: 2, categories: [], features: {} });
   });
 
   it("round-trips through write/read", async () => {
-    const m: Manifest = { version: 1, features: { "user-auth": { spec: "docs/a.md" } } };
+    const m: Manifest = { version: 2, categories: [], features: { "user-auth": { spec: "docs/a.md" } } };
     await writeManifest(vaultPath, m);
     expect(await readManifest(vaultPath)).toEqual(m);
   });
 
   it("set/get/remove are pure and correct", () => {
-    let m: Manifest = { version: 1, features: {} };
+    let m: Manifest = { version: 2, categories: [], features: {} };
     m = setFeatureDoc(m, "user-auth", "spec", "docs/a.md");
     m = setFeatureDoc(m, "user-auth", "plan", "docs/b.md");
     expect(getFeatureDoc(m, "user-auth", "spec")).toBe("docs/a.md");
@@ -51,18 +51,18 @@ describe("manifest", () => {
   });
 
   it("drops a feature with no remaining docs on remove", () => {
-    let m: Manifest = { version: 1, features: { f: { spec: "docs/a.md" } } };
+    let m: Manifest = { version: 2, categories: [], features: { f: { spec: "docs/a.md" } } };
     m = removeFeatureDoc(m, "f", "spec");
     expect(manifestFeatureNames(m)).toEqual([]);
   });
 
   it("lists feature names sorted", () => {
-    const m: Manifest = { version: 1, features: { beta: {}, alpha: {} } };
+    const m: Manifest = { version: 2, categories: [], features: { beta: {}, alpha: {} } };
     expect(manifestFeatureNames(m)).toEqual(["alpha", "beta"]);
   });
 
   it("resolves a doc path against the project root (parent of vault)", () => {
-    const m: Manifest = { version: 1, features: { f: { spec: "docs/a.md" } } };
+    const m: Manifest = { version: 2, categories: [], features: { f: { spec: "docs/a.md" } } };
     expect(resolveDocPath(vaultPath, m, "f", "spec")).toBe(
       path.join(projectRootOf(vaultPath), "docs/a.md")
     );
@@ -81,8 +81,41 @@ describe("manifest", () => {
   });
 
   it("writeManifest is atomic — leaves no temp file behind", async () => {
-    await writeManifest(vaultPath, { version: 1, features: { f: { spec: "docs/a.md" } } });
+    await writeManifest(vaultPath, { version: 2, categories: [], features: { f: { spec: "docs/a.md" } } });
     const left = (await fs.readdir(vaultPath)).filter((f) => f.includes(".tmp"));
     expect(left).toEqual([]);
+  });
+});
+
+describe("manifest v2 migration", () => {
+  it("migrates a stored v1 manifest to v2 shape on read", async () => {
+    const vault = vaultPath;
+    await fs.writeFile(
+      path.join(vault, "index.json"),
+      JSON.stringify({ version: 1, features: { "user-auth": { spec: "docs/a.md" } } }),
+    );
+    const m = await readManifest(vault);
+    expect(m.version).toBe(2);
+    expect(m.categories).toEqual([]);
+    expect(m.features["user-auth"]).toEqual({ spec: "docs/a.md" });
+  });
+
+  it("returns an empty v2 manifest when index.json is absent", async () => {
+    const vault = vaultPath;
+    const m = await readManifest(vault);
+    expect(m).toEqual({ version: 2, categories: [], features: {} });
+  });
+
+  it("preserves categories and per-feature category/tags on round-trip", async () => {
+    const vault = vaultPath;
+    await writeManifest(vault, {
+      version: 2,
+      categories: [{ id: "backend", name: "Backend", color: "blue" }],
+      features: { "user-auth": { spec: "docs/a.md", category: "backend", tags: ["security"] } },
+    });
+    const m = await readManifest(vault);
+    expect(m.categories).toEqual([{ id: "backend", name: "Backend", color: "blue" }]);
+    expect(m.features["user-auth"].category).toBe("backend");
+    expect(m.features["user-auth"].tags).toEqual(["security"]);
   });
 });

@@ -28,7 +28,7 @@ describe("VaultManager.create", () => {
   it("create scaffolds an empty manifest and no specs/plans dirs", async () => {
     await VaultManager.create(vaultPath, "proj");
     const m = await readManifest(vaultPath);
-    expect(m).toEqual({ version: 1, features: {} });
+    expect(m).toEqual({ version: 2, categories: [], features: {} });
     await expect(fs.stat(path.join(vaultPath, "specs"))).rejects.toMatchObject({ code: "ENOENT" });
     await expect(fs.stat(path.join(vaultPath, "plans"))).rejects.toMatchObject({ code: "ENOENT" });
     const config = JSON.parse(await fs.readFile(path.join(vaultPath, "config.json"), "utf-8"));
