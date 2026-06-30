@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "signoff": {
+      "command": "node",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/dist/mcp.mjs",
+        "--vault",
+        "${CLAUDE_PROJECT_DIR}/.signoff"
+      ]
+    }
+  }
+}
