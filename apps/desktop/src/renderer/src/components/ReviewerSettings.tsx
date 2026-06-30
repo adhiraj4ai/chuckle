@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import type { VaultWorkflows } from '@shared/ipc-types'
 
+type Mode = 'unanimous' | 'threshold'
+
 interface Props {
   vaultPath: string
   onClose: () => void
@@ -10,8 +12,10 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
   const [workflows, setWorkflows] = useState<VaultWorkflows | null>(null)
   const [specApprovers, setSpecApprovers] = useState('')
   const [specMin, setSpecMin] = useState(1)
+  const [specMode, setSpecMode] = useState<Mode>('unanimous')
   const [planApprovers, setPlanApprovers] = useState('')
   const [planMin, setPlanMin] = useState(1)
+  const [planMode, setPlanMode] = useState<Mode>('unanimous')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,8 +31,10 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
         setWorkflows(w)
         setSpecApprovers(w.spec.required_approvers.join(', '))
         setSpecMin(clampMin(w.spec.min_approvals))
+        setSpecMode(w.spec.approval_mode === 'threshold' ? 'threshold' : 'unanimous')
         setPlanApprovers(w.plan.required_approvers.join(', '))
         setPlanMin(clampMin(w.plan.min_approvals))
+        setPlanMode(w.plan.approval_mode === 'threshold' ? 'threshold' : 'unanimous')
       })
       .catch((e) => {
         // Escape the "Loading…" state: fall back to defaults + show an error.
@@ -37,6 +43,8 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
           spec: { required_approvers: [], min_approvals: 1 },
           plan: { required_approvers: [], min_approvals: 1 },
         })
+        setSpecMode('unanimous')
+        setPlanMode('unanimous')
         setError(`Couldn't load reviewer settings: ${e instanceof Error ? e.message : String(e)}`)
       })
     return () => { alive = false }
@@ -49,8 +57,8 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
     const parseEmails = (csv: string): string[] =>
       csv.split(',').map((s) => s.trim()).filter(Boolean)
     const next: VaultWorkflows = {
-      spec: { ...workflows.spec, required_approvers: parseEmails(specApprovers), min_approvals: clampMin(specMin) },
-      plan: { ...workflows.plan, required_approvers: parseEmails(planApprovers), min_approvals: clampMin(planMin) },
+      spec: { ...workflows.spec, required_approvers: parseEmails(specApprovers), min_approvals: clampMin(specMin), approval_mode: specMode },
+      plan: { ...workflows.plan, required_approvers: parseEmails(planApprovers), min_approvals: clampMin(planMin), approval_mode: planMode },
     }
     try {
       await window.signoff.workflows.write(vaultPath, next)
@@ -84,16 +92,30 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
           />
           <span className="text-[11px] text-fg/40">Comma-separated emails. Empty = anyone can approve.</span>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[12px] text-fg/60">Min approvals</span>
-          <input
-            type="number"
-            min={1}
-            value={specMin}
-            onChange={(e) => setSpecMin(clampMin(e.target.value))}
-            className="w-20 rounded-lg border border-border bg-app px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30"
-          />
-        </label>
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-[12px] text-fg/60">Approval rule</legend>
+          <label className="flex items-center gap-2 text-[13px] text-fg/80">
+            <input type="radio" name="spec-mode" checked={specMode === 'unanimous'} onChange={() => setSpecMode('unanimous')} />
+            All listed approvers
+          </label>
+          <label className="flex items-center gap-2 text-[13px] text-fg/80">
+            <input type="radio" name="spec-mode" checked={specMode === 'threshold'} onChange={() => setSpecMode('threshold')} />
+            At least N
+          </label>
+          {specMode === 'threshold' && (
+            <label className="flex flex-col gap-1 mt-1">
+              <span className="text-[12px] text-fg/60">Minimum approvals</span>
+              <input
+                type="number"
+                min={1}
+                aria-label="Minimum approvals"
+                value={specMin}
+                onChange={(e) => setSpecMin(clampMin(e.target.value))}
+                className="w-20 rounded-lg border border-border bg-app px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30"
+              />
+            </label>
+          )}
+        </fieldset>
       </section>
 
       <section className="flex flex-col gap-2">
@@ -110,16 +132,30 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
           />
           <span className="text-[11px] text-fg/40">Comma-separated emails. Empty = anyone can approve.</span>
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-[12px] text-fg/60">Min approvals</span>
-          <input
-            type="number"
-            min={1}
-            value={planMin}
-            onChange={(e) => setPlanMin(clampMin(e.target.value))}
-            className="w-20 rounded-lg border border-border bg-app px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30"
-          />
-        </label>
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-[12px] text-fg/60">Approval rule</legend>
+          <label className="flex items-center gap-2 text-[13px] text-fg/80">
+            <input type="radio" name="plan-mode" checked={planMode === 'unanimous'} onChange={() => setPlanMode('unanimous')} />
+            All listed approvers
+          </label>
+          <label className="flex items-center gap-2 text-[13px] text-fg/80">
+            <input type="radio" name="plan-mode" checked={planMode === 'threshold'} onChange={() => setPlanMode('threshold')} />
+            At least N
+          </label>
+          {planMode === 'threshold' && (
+            <label className="flex flex-col gap-1 mt-1">
+              <span className="text-[12px] text-fg/60">Minimum approvals</span>
+              <input
+                type="number"
+                min={1}
+                aria-label="Minimum approvals"
+                value={planMin}
+                onChange={(e) => setPlanMin(clampMin(e.target.value))}
+                className="w-20 rounded-lg border border-border bg-app px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30"
+              />
+            </label>
+          )}
+        </fieldset>
       </section>
 
       {error && (
