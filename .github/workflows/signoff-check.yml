@@ -6,11 +6,6 @@ on:
         description: Git URL of the SignOff vault repo
         required: true
         type: string
-      type:
-        description: Approval type to require (spec or plan)
-        required: false
-        type: string
-        default: plan
       feature:
         description: Override the feature slug (else inferred from PR body/branch)
         required: false
@@ -34,7 +29,6 @@ jobs:
           npx -y @signoff/ci clone-vault "$VAULT_URL" .signoff
       - name: SignOff approval check
         env:
-          SIGNOFF_TYPE: ${{ inputs.type }}
           SIGNOFF_FEATURE: ${{ inputs.feature }}
           SIGNOFF_PR_BODY: ${{ github.event.pull_request.body }}
           SIGNOFF_BRANCH: ${{ github.head_ref }}

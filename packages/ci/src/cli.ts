@@ -3,7 +3,6 @@ import { pathToFileURL } from "node:url";
 import { resolveFeature } from "./resolve-feature.js";
 import { runCheck } from "./check.js";
 import { cloneVaultWithToken } from "./clone-vault.js";
-import type { DocumentType } from "@signoff/vault-core";
 
 function flag(argv: string[], name: string): string | undefined {
   const i = argv.indexOf(`--${name}`);
@@ -11,7 +10,6 @@ function flag(argv: string[], name: string): string | undefined {
 }
 
 export async function cmdCheck(argv: string[], env: NodeJS.ProcessEnv, cwd: string): Promise<number> {
-  const type = (flag(argv, "type") ?? env.SIGNOFF_TYPE ?? "plan") as DocumentType;
   const feature = resolveFeature({
     feature: flag(argv, "feature") ?? env.SIGNOFF_FEATURE,
     prBody: flag(argv, "pr-body") ?? env.SIGNOFF_PR_BODY,
@@ -22,7 +20,7 @@ export async function cmdCheck(argv: string[], env: NodeJS.ProcessEnv, cwd: stri
     process.stderr.write("::error::SignOff: could not determine the feature. Add `Signoff-Feature: <slug>` to the PR body.\n");
     return 2;
   }
-  const res = await runCheck({ projectRoot, feature, type });
+  const res = await runCheck({ projectRoot, feature });
   process.stdout.write(res.message + "\n");
   if (!res.ok) process.stderr.write(`::error::${res.message}\n`);
   return res.ok ? 0 : 1;

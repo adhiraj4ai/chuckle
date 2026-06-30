@@ -2,7 +2,9 @@
 
 The local `signoff-gate` hook is a cooperative guardrail and can be bypassed.
 The un-bypassable gate is a required CI check that fails a pull request unless
-the feature it implements has its **plan** approved in the vault.
+the feature it implements is cleared for code in the vault. The required
+artifact is determined by the feature's tier (light → spec, standard → plan,
+heavy → unanimous plan approval).
 
 ## Setup
 
@@ -38,9 +40,11 @@ the feature it implements has its **plan** approved in the vault.
    protection for your default branch → require the **`SignOff / signoff`**
    status check to pass before merging.
 
-Now a PR cannot merge until the feature's plan is approved in SignOff. Editing
-the spec or plan inside the PR re-fails the check until it is re-approved
-(the check verifies the approved content hash).
+Now a PR cannot merge until the feature is cleared for code in SignOff. The
+required artifact depends on the feature's tier: light features pass once the
+spec is approved; standard features require a plan approval; heavy features
+require unanimous plan approval. Editing a document inside the PR re-fails the
+check until it is re-approved (the check verifies the approved content hash).
 
 > Requires the `@signoff/ci` package to be available on npm (the workflow runs
 > it via `npx`).
