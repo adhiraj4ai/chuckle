@@ -45,6 +45,10 @@ export type {
 // not pull in vault-core's git/simple-git (Node-only) code.
 export { CATEGORY_COLORS, slugify, normalizeTags } from '@signoff/vault-core/categories'
 
+// Tier keys as a runtime constant (mirrors vault-core's TIER_KEYS but inlined here
+// to avoid pulling in the Node-only vault-core barrel into the renderer bundle).
+export const TIER_KEYS: Tier[] = ['light', 'standard', 'heavy']
+
 export interface FeatureEntry {
   name: string
   spec: ApprovalStatus | 'not_found'
