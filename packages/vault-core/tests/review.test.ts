@@ -89,3 +89,58 @@ describe("deriveStatus", () => {
     expect(deriveStatus(legacy, ["a@o.c"], "h")).toBe("pending");
   });
 });
+
+function recWith(states: Record<string, "approved" | "changes_requested" | "in_review">, hash = "h"): ApprovalRecord {
+  const reviewers: ApprovalRecord["reviewers"] = {};
+  for (const [email, status] of Object.entries(states)) {
+    reviewers[email] = { status, content_hash: status === "approved" ? hash : undefined } as never;
+  }
+  return {
+    document: "specs/x.md", feature: "x", type: "spec", workflow: "spec",
+    status: "pending", reviewers, history: [],
+  } as ApprovalRecord;
+}
+
+describe("deriveStatus threshold mode", () => {
+  const req = ["a@o.c", "b@o.c", "c@o.c"];
+  const opt = (minApprovals: number) => ({ mode: "threshold" as const, minApprovals });
+
+  it("approves at exactly min approvals (1 of 3)", () => {
+    expect(deriveStatus(recWith({ "a@o.c": "approved" }), req, "h", opt(1))).toBe("approved");
+  });
+
+  it("does not approve below min (needs 2, has 1)", () => {
+    expect(deriveStatus(recWith({ "a@o.c": "approved" }), req, "h", opt(2))).toBe("in_review");
+  });
+
+  it("approves once min is met (2 of 3)", () => {
+    expect(deriveStatus(recWith({ "a@o.c": "approved", "b@o.c": "approved" }), req, "h", opt(2))).toBe("approved");
+  });
+
+  it("clamps min above the required count to unanimous-equivalent", () => {
+    expect(deriveStatus(recWith({ "a@o.c": "approved", "b@o.c": "approved" }), req, "h", opt(9))).toBe("in_review");
+    expect(deriveStatus(recWith({ "a@o.c": "approved", "b@o.c": "approved", "c@o.c": "approved" }), req, "h", opt(9))).toBe("approved");
+  });
+
+  it("clamps min<=0 / NaN up to 1", () => {
+    expect(deriveStatus(recWith({ "a@o.c": "approved" }), req, "h", { mode: "threshold", minApprovals: 0 })).toBe("approved");
+  });
+
+  it("counts only FRESH approvals (stale approval does not count)", () => {
+    const stale = recWith({ "a@o.c": "approved" }, "OLD");
+    expect(deriveStatus(stale, req, "NEW", opt(1))).toBe("in_review");
+  });
+
+  it("changes_requested by a required reviewer still blocks in threshold mode", () => {
+    expect(deriveStatus(recWith({ "a@o.c": "approved", "b@o.c": "changes_requested" }), req, "h", opt(1))).toBe("rejected");
+  });
+
+  it("omitting options reproduces unanimous (regression)", () => {
+    expect(deriveStatus(recWith({ "a@o.c": "approved" }), req, "h")).toBe("in_review");
+    expect(deriveStatus(recWith({ "a@o.c": "approved", "b@o.c": "approved", "c@o.c": "approved" }), req, "h")).toBe("approved");
+  });
+
+  it("empty required list + threshold falls through to any-one-approval", () => {
+    expect(deriveStatus(recWith({ "z@o.c": "approved" }), [], "h", opt(5))).toBe("approved");
+  });
+});

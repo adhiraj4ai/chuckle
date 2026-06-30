@@ -14,6 +14,7 @@ export type {
   VaultsRegistry,
   PublishResult,
   CheckApprovalResult,
+  ApprovalMode,
 } from "./types.js";
 
 // Feature inference + validation

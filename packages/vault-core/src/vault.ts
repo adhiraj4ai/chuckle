@@ -26,10 +26,12 @@ const DEFAULT_WORKFLOWS = {
   spec: {
     required_approvers: [] as string[],
     min_approvals: 1,
+    approval_mode: "unanimous" as const,
   },
   plan: {
     required_approvers: [] as string[],
     min_approvals: 1,
+    approval_mode: "unanimous" as const,
   },
 };
 

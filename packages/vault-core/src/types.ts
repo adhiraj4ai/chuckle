@@ -17,6 +17,8 @@ export type ApprovalStatus =
 
 export type ReviewerStatus = "pending" | "in_review" | "approved" | "changes_requested";
 
+export type ApprovalMode = "unanimous" | "threshold";
+
 export interface ReviewerState {
   status: ReviewerStatus;
   at: string;              // ISO 8601 UTC
@@ -45,6 +47,7 @@ export interface WorkflowConfig {
   required_approvers: string[];   // git emails
   optional_approvers?: string[];
   min_approvals: number;
+  approval_mode?: ApprovalMode;   // absent ⇒ "unanimous"
 }
 
 export interface VaultWorkflows {

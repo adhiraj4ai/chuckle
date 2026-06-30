@@ -1,4 +1,4 @@
-import type { ApprovalRecord, ApprovalStatus, ReviewerStatus, ApprovalAction } from "./types.js";
+import type { ApprovalRecord, ApprovalStatus, ReviewerStatus, ApprovalAction, ApprovalMode } from "./types.js";
 
 export type ReviewAction = "start_review" | "approve" | "request_changes" | "reopen";
 
@@ -54,7 +54,8 @@ export function applyReviewerAction(
 export function deriveStatus(
   record: ApprovalRecord,
   requiredApprovers: string[] | null,
-  currentHash: string | null
+  currentHash: string | null,
+  options?: { mode?: ApprovalMode; minApprovals?: number }
 ): ApprovalStatus {
   const reviewers = record.reviewers ?? {};
   const entries = Object.entries(reviewers);
@@ -70,7 +71,16 @@ export function deriveStatus(
     // Required set unknown — fail closed. The doc can never be "approved" here;
     // at most reflect that review is underway.
   } else if (requiredApprovers.length > 0) {
-    if (requiredApprovers.every((e) => reviewers[e] && approvedFresh(reviewers[e]))) return "approved";
+    if (options?.mode === "threshold") {
+      const min = Math.min(
+        requiredApprovers.length,
+        Math.max(1, Math.floor(options.minApprovals ?? 1) || 1)
+      );
+      const freshCount = requiredApprovers.filter((e) => reviewers[e] && approvedFresh(reviewers[e])).length;
+      if (freshCount >= min) return "approved";
+    } else if (requiredApprovers.every((e) => reviewers[e] && approvedFresh(reviewers[e]))) {
+      return "approved";
+    }
   } else if (entries.some(([, s]) => approvedFresh(s))) {
     return "approved";
   }
