@@ -4,8 +4,8 @@ import { Sidebar } from '@renderer/components/Sidebar'
 import type { FeatureEntry } from '@shared/ipc-types'
 
 const features: FeatureEntry[] = [
-  { name: 'user-auth', spec: 'pending', plan: 'approved' },
-  { name: 'payment-gw', spec: 'rejected', plan: 'not_found' },
+  { name: 'user-auth', spec: 'pending', plan: 'approved', category: null, tags: [] },
+  { name: 'payment-gw', spec: 'rejected', plan: 'not_found', category: null, tags: [] },
 ]
 
 describe('Sidebar', () => {
@@ -21,7 +21,7 @@ describe('Sidebar', () => {
   })
 
   it('uppercases known acronyms when humanizing', () => {
-    render(<Sidebar vaultName="vault" features={[{ name: 'mcp-server', spec: 'pending', plan: 'not_found' }]} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    render(<Sidebar vaultName="vault" features={[{ name: 'mcp-server', spec: 'pending', plan: 'not_found', category: null, tags: [] }]} selected={null} onSelect={() => {}} onSync={() => {}} />)
     expect(screen.getByText('MCP Server')).toBeInTheDocument()
   })
 
@@ -49,8 +49,8 @@ describe('Sidebar', () => {
 
   it('surfaces in_review docs via the In review filter chip and tints them', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'in_review', plan: 'not_found' },
-      { name: 'payment-gw', spec: 'approved', plan: 'not_found' },
+      { name: 'user-auth', spec: 'in_review', plan: 'not_found', category: null, tags: [] },
+      { name: 'payment-gw', spec: 'approved', plan: 'not_found', category: null, tags: [] },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     // The In review chip exists with a count of 1
@@ -72,6 +72,35 @@ describe('Sidebar', () => {
     expect(screen.getByText('No features match.')).toBeInTheDocument()
     fireEvent.click(screen.getByText('Clear filters'))
     expect(screen.getByText('User Auth')).toBeInTheDocument()
+  })
+
+  it('renders a category group and an Uncategorized group when arranging by category', () => {
+    const fs: FeatureEntry[] = [
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', category: { id: 'backend', name: 'Backend', color: 'blue' }, tags: [] },
+      { name: 'payment-gw', spec: 'pending', plan: 'not_found', category: null, tags: [] },
+    ]
+    render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    fireEvent.click(screen.getByText('Category'))
+    expect(screen.getByText('Backend')).toBeInTheDocument()
+    expect(screen.getByText('Uncategorized')).toBeInTheDocument()
+  })
+
+  it('filters by a tag chip (AND with other filters)', () => {
+    const fs: FeatureEntry[] = [
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', category: null, tags: ['security'] },
+      { name: 'payment-gw', spec: 'pending', plan: 'not_found', category: null, tags: [] },
+    ]
+    render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    fireEvent.click(screen.getByText(/#security/))
+    expect(screen.getByText('User Auth')).toBeInTheDocument()
+    expect(screen.queryByText('Payment Gw')).not.toBeInTheDocument()
+  })
+
+  it('calls onManageCategories when the manage affordance is clicked', () => {
+    const onManageCategories = vi.fn()
+    render(<Sidebar vaultName="vault" features={features} selected={null} onSelect={() => {}} onSync={() => {}} onManageCategories={onManageCategories} />)
+    fireEvent.click(screen.getByLabelText('Manage categories'))
+    expect(onManageCategories).toHaveBeenCalled()
   })
 
   it('calls onSync when Sync clicked', () => {

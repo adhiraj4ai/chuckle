@@ -2,10 +2,12 @@ import React, { useState } from 'react'
 import type { FeatureEntry, ApprovalStatus } from '@shared/ipc-types'
 import { Logo } from './Logo'
 import { humanizeFeature } from '../lib/feature'
+import { CategorySwatch } from './CategorySwatch'
+import { groupByCategory, matchesTagFilter, allTags } from '../lib/grouping'
 
 type DocType = 'spec' | 'plan'
 type Status = ApprovalStatus | 'not_found'
-type GroupBy = 'feature' | 'status'
+type GroupBy = 'feature' | 'status' | 'category'
 type StatusFilter = ApprovalStatus | 'all'
 
 interface Props {
@@ -17,6 +19,8 @@ interface Props {
   onSwitchVault?: () => void
   /** True for features that arrived since the vault was last seen and haven't been opened. */
   isNew?: (feature: string) => boolean
+  /** Opens the category-management modal (wired by App). */
+  onManageCategories?: () => void
 }
 
 function statusLabel(status: Status): string {
@@ -97,10 +101,12 @@ export function Sidebar({
   onSync,
   onSwitchVault,
   isNew,
+  onManageCategories,
 }: Props): React.ReactElement {
   const [groupBy, setGroupBy] = useState<GroupBy>('feature')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+  const [activeTags, setActiveTags] = useState<string[]>([])
 
   const counts: Record<StatusFilter, number> = {
     all: features.length,
@@ -115,9 +121,10 @@ export function Sidebar({
   const filtered = features.filter(
     (f) =>
       (statusFilter === 'all' || featureStatuses(f).includes(statusFilter)) &&
+      matchesTagFilter(f, activeTags) &&
       (q === '' || f.name.toLowerCase().includes(q) || humanizeFeature(f.name).toLowerCase().includes(q))
   )
-  const filtering = q !== '' || statusFilter !== 'all'
+  const filtering = q !== '' || statusFilter !== 'all' || activeTags.length > 0
 
   function featureRow(f: FeatureEntry): React.ReactElement {
     const isSelected = selected?.feature === f.name
@@ -146,6 +153,22 @@ export function Sidebar({
             aria-label="New"
             className="shrink-0 w-1.5 h-1.5 rounded-full bg-iris"
           />
+        )}
+        {f.category && (
+          <span title={f.category.name} className="shrink-0">
+            <CategorySwatch color={f.category.color} />
+          </span>
+        )}
+        {f.tags.slice(0, 2).map((t) => (
+          <span
+            key={t}
+            className="shrink-0 text-[9px] leading-none px-1 py-0.5 rounded bg-railfg/[0.08] text-railfg/50"
+          >
+            {t}
+          </span>
+        ))}
+        {f.tags.length > 2 && (
+          <span className="shrink-0 text-[9px] text-railfg/35">+{f.tags.length - 2}</span>
         )}
         <span className="flex items-center gap-1 shrink-0">
           {types.map((t) => (
@@ -258,7 +281,37 @@ export function Sidebar({
             <button onClick={() => setGroupBy('status')} className={tabClass(groupBy === 'status')}>
               Status
             </button>
+            <button onClick={() => setGroupBy('category')} className={tabClass(groupBy === 'category')}>
+              Category
+            </button>
+            {onManageCategories && (
+              <button onClick={onManageCategories} title="Manage categories" aria-label="Manage categories" className={tabClass(false)}>
+                ⚙
+              </button>
+            )}
           </div>
+
+          {/* Tag filter — narrow the list to features carrying every selected tag */}
+          {allTags(features).length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {allTags(features).map(({ tag, count }) => {
+                const active = activeTags.includes(tag)
+                return (
+                  <button
+                    key={tag}
+                    onClick={() =>
+                      setActiveTags((prev) => (active ? prev.filter((t) => t !== tag) : [...prev, tag]))
+                    }
+                    className={`text-[10.5px] font-medium px-1.5 py-0.5 rounded transition-colors ${
+                      active ? 'bg-iris/20 text-iris' : 'text-railfg/45 hover:bg-railfg/[0.06] hover:text-railfg/80'
+                    }`}
+                  >
+                    #{tag} <span className="opacity-60">{count}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -306,6 +359,21 @@ export function Sidebar({
               </div>
             )
           })}
+
+        {groupBy === 'category' &&
+          groupByCategory(filtered).map((g) => (
+            <div key={g.category?.id ?? '__uncategorized'} className="mb-3">
+              <p className="flex items-center gap-1.5 text-[10.5px] font-semibold text-railfg/40 px-3 mb-1">
+                {g.category ? (
+                  <CategorySwatch color={g.category.color} />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-railfg/20" />
+                )}
+                {g.category?.name ?? 'Uncategorized'}
+              </p>
+              {g.features.map((f) => featureRow(f))}
+            </div>
+          ))}
       </nav>
 
       <footer className="px-4 py-2.5 border-t border-railfg/[0.08] text-[10.5px] tracking-wide text-railfg/30">
