@@ -3,6 +3,7 @@ import {
   validateFeatureName,
   type DocumentType,
   type PublishResult,
+  type Tier,
 } from "@signoff/vault-core";
 import { resolveGitAuthor } from "./git-author.js";
 import { validateDocumentPath } from "./validate-input.js";
@@ -19,7 +20,7 @@ export async function handleSubmit(
   if (typeof args !== "object" || args === null) {
     throw new Error("args must be a plain object");
   }
-  const { feature_name, document_type, document_path, category, tags } = args as Record<string, unknown>;
+  const { feature_name, document_type, document_path, category, tags, tier } = args as Record<string, unknown>;
   if (typeof feature_name !== "string" || feature_name.length === 0) {
     throw new Error("feature_name must be a non-empty string");
   }
@@ -36,8 +37,9 @@ export async function handleSubmit(
 
   const { name, email } = await resolveGitAuthor(vaultPath);
   const vault = await VaultManager.open(vaultPath);
-  const opts: { category?: string; tags?: string[] } = {};
+  const opts: { category?: string; tags?: string[]; tier?: Tier } = {};
   if (typeof category === "string" && category.length) opts.category = category;
   if (Array.isArray(tags)) opts.tags = tags.filter((t): t is string => typeof t === "string");
+  if (tier === "light" || tier === "standard" || tier === "heavy") opts.tier = tier as Tier;
   return vault.submitForReview(feature_name, document_type as DocumentType, document_path, email, name, opts);
 }

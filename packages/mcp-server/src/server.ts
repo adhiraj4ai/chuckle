@@ -45,6 +45,11 @@ export function createServer(vaultPath: string): Server {
               items: { type: "string" },
               description: "Optional suggested free-form tags; merged with any existing tags.",
             },
+            tier: {
+              type: "string",
+              enum: ["light", "standard", "heavy"],
+              description: "Suggested risk tier: light (spec only), standard (spec+plan), heavy (spec+plan, unanimous). Applied only if the feature has no tier yet.",
+            },
           },
           required: ["feature_name", "document_type", "document_path"],
         },
@@ -77,6 +82,11 @@ export function createServer(vaultPath: string): Server {
               type: "array",
               items: { type: "string" },
               description: "Optional suggested free-form tags; merged with any existing tags.",
+            },
+            tier: {
+              type: "string",
+              enum: ["light", "standard", "heavy"],
+              description: "Suggested risk tier: light (spec only), standard (spec+plan), heavy (spec+plan, unanimous). Applied only if the feature has no tier yet.",
             },
           },
           required: ["feature_name", "document_type", "document_path"],
