@@ -397,7 +397,7 @@ export async function setFeatureTierBridge(
 ): Promise<ReviewResult> {
   return transact(vaultPath, async () => {
     await writeManifest(vaultPath, setFeatureTier(await readManifest(vaultPath), feature, tier))
-    return { files: [manifestRelPath], message: `feature: set tier ${feature} = ${tier}` }
+    return { files: [manifestRelPath], message: `chore: set tier of ${feature} = ${tier}` }
   })
 }
 

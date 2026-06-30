@@ -157,6 +157,7 @@ export function Sidebar({
         {f.tier !== 'standard' && (
           <span
             title={`${f.tier} tier`}
+            aria-label={`${f.tier} tier`}
             className="shrink-0 text-[8.5px] font-semibold uppercase tracking-wide px-1 py-0.5 rounded bg-railfg/[0.07] text-railfg/45"
           >
             {f.tier}

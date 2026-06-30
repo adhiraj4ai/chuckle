@@ -42,9 +42,11 @@ describe('FeatureMetaBar', () => {
   })
 
   it('shows the current tier and persists a change via features.setTier', async () => {
-    render(<FeatureMetaBar vaultPath="/v" feature={feature} onChanged={() => {}} />)
+    const onChanged = vi.fn()
+    render(<FeatureMetaBar vaultPath="/v" feature={feature} onChanged={onChanged} />)
     const heavy = await screen.findByRole('radio', { name: /heavy/i })
     fireEvent.click(heavy)
     await waitFor(() => expect(window.signoff.features.setTier).toHaveBeenCalledWith('/v', 'user-auth', 'heavy'))
+    await waitFor(() => expect(onChanged).toHaveBeenCalled())
   })
 })
