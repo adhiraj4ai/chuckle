@@ -66,15 +66,17 @@ export type { Tier } from "./tiers.js";
 export { TIER_KEYS, normalizeTier, tierGatingArtifact, tierForcesUnanimous } from "./tiers.js";
 
 // Workflow
-export { readWorkflows, getWorkflowForType } from "./workflow.js";
+export { readWorkflows, writeWorkflows, getWorkflowForType } from "./workflow.js";
 
 // Approval
+export type { CodeClearance } from "./approval.js";
 export {
   approvalFilePath,
   readApproval,
   writeApproval,
   appendHistory,
   getApprovalStatus,
+  isClearedForCode,
   isStale,
 } from "./approval.js";
 

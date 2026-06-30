@@ -11,6 +11,7 @@ import type {
 import { deriveStatus } from "./review.js";
 import { readWorkflows, getWorkflowForType } from "./workflow.js";
 import { readManifest, resolveDocPath, hashContent } from "./manifest.js";
+import { normalizeTier, tierGatingArtifact, tierForcesUnanimous, type Tier } from "./tiers.js";
 import { validateFeatureName } from "./feature.js";
 import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
@@ -70,7 +71,8 @@ export function appendHistory(
 export async function getApprovalStatus(
   vaultPath: string,
   feature: string,
-  type: DocumentType
+  type: DocumentType,
+  opts?: { forceMode?: ApprovalMode }
 ): Promise<CheckApprovalResult> {
   const record = await readApproval(vaultPath, feature, type);
   if (!record) return { status: "not_found" };
@@ -96,7 +98,7 @@ export async function getApprovalStatus(
     currentHash = null;
   }
 
-  const status = deriveStatus(record, required, currentHash, { mode, minApprovals });
+  const status = deriveStatus(record, required, currentHash, { mode: opts?.forceMode ?? mode, minApprovals });
   if (status === "approved") {
     const approvedEntry = [...record.history].reverse().find((e) => e.action === "approved");
     return { status, approved_by: approvedEntry?.by, approved_at: approvedEntry?.at };
@@ -114,4 +116,25 @@ export function isStale(record: ApprovalRecord, currentHash: string): boolean {
   const approved = [...record.history].reverse().find((e) => e.action === "approved");
   if (!approved?.content_hash) return false;
   return approved.content_hash !== currentHash;
+}
+
+export interface CodeClearance {
+  cleared: boolean;
+  tier: Tier;
+  artifact: DocumentType;
+  status: ApprovalStatus | "not_found";
+}
+
+/** The single source of truth for "may code proceed for this feature?" — used by
+ *  both the local hook and the CI check. Reads the feature's tier, gates on the
+ *  tier's artifact, and forces unanimous for heavy. Fail-closed via getApprovalStatus. */
+export async function isClearedForCode(vaultPath: string, feature: string): Promise<CodeClearance> {
+  const manifest = await readManifest(vaultPath);
+  const tier = normalizeTier(manifest.features[feature]?.tier);
+  const artifact = tierGatingArtifact(tier);
+  const res = await getApprovalStatus(
+    vaultPath, feature, artifact,
+    tierForcesUnanimous(tier) ? { forceMode: "unanimous" } : undefined
+  );
+  return { cleared: res.status === "approved", tier, artifact, status: res.status };
 }

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { VaultWorkflows, WorkflowConfig, DocumentType } from "./types.js";
-import { parseJsonOrThrow } from "./fsutil.js";
+import { parseJsonOrThrow, writeJsonAtomic } from "./fsutil.js";
 
 export async function readWorkflows(vaultPath: string): Promise<VaultWorkflows> {
   const filePath = path.join(vaultPath, "workflows.json");
@@ -22,4 +22,9 @@ export function getWorkflowForType(
   type: DocumentType
 ): WorkflowConfig {
   return workflows[type];
+}
+
+export async function writeWorkflows(vaultPath: string, workflows: VaultWorkflows): Promise<void> {
+  const filePath = path.join(vaultPath, "workflows.json");
+  await writeJsonAtomic(filePath, workflows);
 }
