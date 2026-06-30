@@ -78,7 +78,7 @@ export interface ReviewResult {
 export type IpcChannels =
   | 'vault:list' | 'vault:remove' | 'vault:create' | 'vault:open-existing' | 'vault:select-directory' | 'vault:sync' | 'vault:get-remote'
   | 'vault:log' | 'vault:status' | 'vault:push' | 'vault:publish-branch' | 'vault:author'
-  | 'vault:connect-remote' | 'vault:clone' | 'vault:sync-state'
+  | 'vault:connect-remote' | 'vault:clone' | 'vault:sync-state' | 'vault:connect-claude'
   | 'features:list'
   | 'document:read' | 'document:write' | 'document:get-approval' | 'document:is-stale'
   | 'review:action'
@@ -106,6 +106,7 @@ export interface SignoffAPI {
     connectRemote(vaultPath: string, url: string): Promise<{ ok: boolean; error?: string; errorKind?: GitErrorKind }>
     clone(url: string, destDir: string): Promise<VaultOpenResult>
     syncState(vaultPath: string): Promise<SyncState>
+    connectClaude(vaultPath: string): Promise<{ settingsPath: string }>
   }
   features: {
     list(vaultPath: string): Promise<FeatureEntry[]>

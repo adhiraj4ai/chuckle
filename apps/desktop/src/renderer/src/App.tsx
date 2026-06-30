@@ -8,6 +8,7 @@ import { StatusBar } from './components/StatusBar'
 import { GitPanel } from './components/GitPanel'
 import { useVault } from './hooks/useVault'
 import { useAutoSync } from './hooks/useAutoSync'
+import { useSeenFeatures } from './hooks/useSeenFeatures'
 import type { ApprovalRecord, ApprovalStatus, DocumentType, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
 
 const DOC_TYPES: DocumentType[] = ['spec', 'plan']
@@ -125,7 +126,7 @@ export function SelectedDocument({
 }
 
 export function App(): React.ReactElement {
-  const { state, openVault, closeVault, selectFeature, selectType, refresh, sync } = useVault()
+  const { state, openVault, closeVault, selectFeature, selectType, refresh } = useVault()
   const [showGit, setShowGit] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
@@ -146,6 +147,16 @@ export function App(): React.ReactElement {
   const vaultPath = state?.vaultPath ?? null
   const bump = useCallback(() => setSyncKey((k) => k + 1), [])
 
+  // "New until opened" tracking for sidebar features.
+  const { isNew, markSeen } = useSeenFeatures(vaultPath, state?.features.map((f) => f.name) ?? [])
+  const onSelectFeature = useCallback(
+    (feature: string) => {
+      markSeen(feature)
+      selectFeature(feature)
+    },
+    [markSeen, selectFeature]
+  )
+
   // Single in-flight guard: syncNow, the auto-sync tick, and any other sync
   // trigger all funnel through this. Only one pull+push runs at a time; a
   // concurrent request is skipped (returns false) rather than racing.
@@ -165,6 +176,14 @@ export function App(): React.ReactElement {
       } catch {
         /* best-effort */
       }
+      // Re-list features regardless of pull/push outcome: a new spec may already
+      // be in the local manifest (published by the MCP server) even when the
+      // remote pull fails, and the in-memory list would otherwise stay stale.
+      try {
+        await refresh()
+      } catch {
+        /* keep the last-known list rather than throwing */
+      }
       setLastSyncedAt(Date.now())
       bump()
       return true
@@ -172,7 +191,7 @@ export function App(): React.ReactElement {
       setSyncing(false)
       syncInFlight.current = false
     }
-  }, [vaultPath, bump])
+  }, [vaultPath, bump, refresh])
 
   // Auto-sync ticks go through runSync so they skip while a manual/other sync
   // is already running; runSync itself updates lastSyncedAt + bumps.
@@ -228,9 +247,10 @@ export function App(): React.ReactElement {
           vaultName={state.vaultName}
           features={state.features}
           selected={active}
-          onSelect={selectFeature}
-          onSync={sync}
+          onSelect={onSelectFeature}
+          onSync={syncNow}
           onSwitchVault={closeVault}
+          isNew={isNew}
         />
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {!active ? (

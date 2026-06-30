@@ -1,0 +1,11 @@
+{
+  "name": "signoff",
+  "owner": { "name": "adhiraj4ai" },
+  "plugins": [
+    {
+      "name": "signoff",
+      "source": "./packages/claude-plugin",
+      "description": "Gate code changes behind human approval of spec and plan documents."
+    }
+  ]
+}

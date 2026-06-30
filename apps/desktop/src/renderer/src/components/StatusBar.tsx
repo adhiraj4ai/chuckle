@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import type { GitStatus, SyncState } from '@shared/ipc-types'
+import type { SyncState } from '@shared/ipc-types'
 import { AUTO_SYNC_OPTIONS } from '../hooks/useAutoSync'
 
 const PROJECT_DOCS_URL = 'https://github.com/adhiraj4ai/signoff'
@@ -60,24 +60,22 @@ export function StatusBar({
   onSetTheme,
 }: Props): React.ReactElement {
   const [remote, setRemote] = useState<string | null>(null)
-  const [status, setStatus] = useState<GitStatus | null>(null)
   const [syncStateData, setSyncStateData] = useState<SyncState | null>(null)
   const [author, setAuthor] = useState<{ name: string; email: string } | null>(null)
   const [open, setOpen] = useState<'identity' | 'vault' | 'settings' | null>(null)
+  const [connectMsg, setConnectMsg] = useState<string | null>(null)
   const barRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     let alive = true
     Promise.all([
       window.signoff.vault.getRemote(vaultPath),
-      window.signoff.vault.status(vaultPath),
       window.signoff.vault.author(vaultPath),
       window.signoff.vault.syncState(vaultPath),
     ])
-      .then(([r, s, a, ss]) => {
+      .then(([r, a, ss]) => {
         if (!alive) return
         setRemote(r)
-        setStatus(s)
         setAuthor(a)
         setSyncStateData(ss)
       })
@@ -101,29 +99,23 @@ export function StatusBar({
   }, [open])
 
   const repo = ghRepo(remote)
-  const noUpstream = !status?.tracking
   const autoLabel = AUTO_SYNC_OPTIONS.find((o) => o.ms === autoSyncMs)?.label ?? 'Off'
 
-  // syncState-derived indicator: "Not connected" | "Synced" | "↑N ↓M"
-  function syncIndicatorLabel(): string {
-    if (!syncStateData) return '…'
-    if (!syncStateData.hasRemote) return 'Not connected'
-    if (syncStateData.hasUpstream && syncStateData.ahead === 0 && syncStateData.behind === 0) return 'Synced'
-    return `↑${syncStateData.ahead} ↓${syncStateData.behind}`
-  }
-
-  async function contribute(): Promise<void> {
-    try {
-      if (noUpstream && remote) {
-        await window.signoff.vault.publishBranch(vaultPath)
-        onSyncNow()
-      } else if (repo.web) {
-        await window.signoff.openExternal(repo.web)
-      }
-    } catch {
-      /* best-effort; sync indicator reflects publish failures */
+  // One git-status chip stands in for the old remote/sync-state/history/publish
+  // buttons: it names the repo and flags the one state that needs attention.
+  // Everything else (push, pull, publish, connect, history) lives one click away
+  // in the Source-control panel this button opens.
+  function gitState(): { label: string; sub: string | null; tone: 'ok' | 'wait' | 'dim' } {
+    if (!syncStateData) return { label: '…', sub: null, tone: 'dim' }
+    if (!syncStateData.hasRemote) return { label: 'Connect repo', sub: null, tone: 'dim' }
+    if (!syncStateData.hasUpstream) return { label: repo.label, sub: 'Publish', tone: 'wait' }
+    if (syncStateData.ahead > 0 || syncStateData.behind > 0) {
+      return { label: repo.label, sub: `↑${syncStateData.ahead} ↓${syncStateData.behind}`, tone: 'wait' }
     }
+    return { label: repo.label, sub: null, tone: 'ok' }
   }
+  const git = gitState()
+  const toneClass = { ok: 'text-railfg/70', wait: 'text-wait', dim: 'text-railfg/40' }[git.tone]
 
   return (
     <footer
@@ -161,50 +153,44 @@ export function StatusBar({
           >
             Switch project
           </button>
+          <button
+            onClick={async () => {
+              try {
+                const { settingsPath } = await window.signoff.vault.connectClaude(vaultPath)
+                setConnectMsg(`Wrote ${settingsPath}`)
+              } catch (err) {
+                setConnectMsg(`Couldn't connect: ${err instanceof Error ? err.message : String(err)}`)
+              }
+            }}
+            className="mt-2 block text-iris hover:underline text-[12px]"
+          >
+            Connect to Claude Code
+          </button>
+          {connectMsg && <p className="mt-1.5 text-[11px] text-fg/50 break-all">{connectMsg}</p>}
+          <p className="mt-1.5 text-[11px] text-fg/40">
+            Requires the SignOff npm packages (or use the Claude Code plugin).
+          </p>
         </Popover>
       )}
-      <Sep />
 
-      {/* Remote */}
-      <button className={cls} onClick={onOpenSourceControl} title={remote ?? 'No git remote'}>
+      <span className="flex-1" />
+
+      {/* Git status — names the repo, flags the one state needing attention,
+          and opens Source control for push/pull/publish/connect/history. */}
+      <button className={cls} onClick={onOpenSourceControl} title="Source control" aria-label="Source control">
         <GitHubMark />
-        <span className={repo.web ? 'text-railfg/70' : 'text-railfg/40'}>{repo.label}</span>
+        <span className={toneClass}>{git.label}</span>
+        {git.sub && (
+          <span className={`px-1.5 py-px rounded text-[10px] font-medium ${git.tone === 'wait' ? 'bg-wait/15 text-wait' : 'text-railfg/45'}`}>
+            {git.sub}
+          </span>
+        )}
       </button>
-      <Sep />
-
-      {/* Sync state indicator */}
-      <button className={cls} onClick={onOpenSourceControl} title="Sync state">
-        <span className={
-          syncStateData && !syncStateData.hasRemote
-            ? 'text-fg/40'
-            : (syncStateData?.ahead ?? 0) > 0 || (syncStateData ? !syncStateData.hasUpstream : false)
-              ? 'text-wait'
-              : 'text-railfg/55'
-        }>
-          {syncIndicatorLabel()}
-        </span>
-      </button>
-      <Sep />
 
       {/* Sync now */}
       <button className={cls} onClick={onSyncNow} disabled={syncing} title="Pull and push now">
         <SyncIcon spin={syncing} />
         <span>{syncing ? 'syncing…' : relTime(lastSyncedAt)}</span>
-      </button>
-
-      <span className="flex-1" />
-
-      {/* History */}
-      <button className={cls} onClick={onOpenSourceControl} title="Commit history">
-        <HistoryIcon />
-        History
-      </button>
-      <Sep />
-
-      {/* Contribute */}
-      <button className={cls} onClick={contribute} title={noUpstream ? 'Publish branch' : 'Open on GitHub'}>
-        <BranchIcon />
-        {noUpstream && remote ? 'Publish' : 'Contribute'}
       </button>
       <Sep />
 
@@ -288,23 +274,6 @@ function SyncIcon({ spin }: { spin: boolean }): React.ReactElement {
     <svg viewBox="0 0 16 16" className={`w-3.5 h-3.5 ${spin ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.3">
       <path d="M13.5 8a5.5 5.5 0 01-9.4 3.9M2.5 8a5.5 5.5 0 019.4-3.9" strokeLinecap="round" />
       <path d="M12 1.5V4.5H9M4 14.5V11.5H7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function HistoryIcon(): React.ReactElement {
-  return (
-    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.3">
-      <path d="M2 8l2.5-3 2 2.5L9 4l2 3 3-4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function BranchIcon(): React.ReactElement {
-  return (
-    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.3">
-      <circle cx="4" cy="3.5" r="1.5" />
-      <circle cx="4" cy="12.5" r="1.5" />
-      <circle cx="12" cy="3.5" r="1.5" />
-      <path d="M4 5v6M12 5v1.5A3.5 3.5 0 018.5 10H6" strokeLinecap="round" />
     </svg>
   )
 }

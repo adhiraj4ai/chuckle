@@ -41,6 +41,7 @@ import {
   contentSecurityPolicy,
   rendererWebPreferences,
 } from './security.js'
+import { connectClaudeCode } from './connect-claude.js'
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -133,6 +134,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('vault:connect-remote', (_e, { vaultPath, url }) => connectRemote(vaultPath, url))
   ipcMain.handle('vault:clone', (_e, { url, destDir }) => cloneVault(url, destDir))
   ipcMain.handle('vault:sync-state', (_e, { vaultPath }) => getSyncStateBridge(vaultPath))
+  ipcMain.handle('vault:connect-claude', (_e, { vaultPath }) => connectClaudeCode(vaultPath))
 }
 
 app.whenReady().then(() => {

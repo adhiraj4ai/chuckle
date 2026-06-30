@@ -21,7 +21,6 @@ export interface UseVaultReturn {
   selectFeature: (feature: string) => void
   selectType: (type: DocumentType) => void
   refresh: () => Promise<void>
-  sync: () => Promise<void>
 }
 
 /** Prefer the spec when it exists, otherwise the plan. */
@@ -63,12 +62,5 @@ export function useVault(): UseVaultReturn {
     setState((prev) => (prev ? { ...prev, features } : prev))
   }, [])
 
-  const sync = useCallback(async () => {
-    if (!vaultPathRef.current) return
-    await window.signoff.vault.sync(vaultPathRef.current)
-    const features = await window.signoff.features.list(vaultPathRef.current)
-    setState((prev) => (prev ? { ...prev, features } : prev))
-  }, [])
-
-  return { state, openVault, closeVault, selectFeature, selectType, refresh, sync }
+  return { state, openVault, closeVault, selectFeature, selectType, refresh }
 }

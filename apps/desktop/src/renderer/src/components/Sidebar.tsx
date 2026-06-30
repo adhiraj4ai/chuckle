@@ -15,6 +15,8 @@ interface Props {
   onSelect: (feature: string) => void
   onSync: () => void
   onSwitchVault?: () => void
+  /** True for features that arrived since the vault was last seen and haven't been opened. */
+  isNew?: (feature: string) => boolean
 }
 
 function statusLabel(status: Status): string {
@@ -94,6 +96,7 @@ export function Sidebar({
   onSelect,
   onSync,
   onSwitchVault,
+  isNew,
 }: Props): React.ReactElement {
   const [groupBy, setGroupBy] = useState<GroupBy>('feature')
   const [query, setQuery] = useState('')
@@ -119,6 +122,7 @@ export function Sidebar({
   function featureRow(f: FeatureEntry): React.ReactElement {
     const isSelected = selected?.feature === f.name
     const types = DOC_TYPES.filter((t) => f[t] !== 'not_found')
+    const fresh = isNew?.(f.name) ?? false
     return (
       <button
         key={f.name}
@@ -133,7 +137,16 @@ export function Sidebar({
         <span className={isSelected ? 'text-railfg/80' : 'text-railfg/40'}>
           <FeatureGlyph />
         </span>
-        <span className="truncate flex-1 text-left">{humanizeFeature(f.name)}</span>
+        <span className={`truncate flex-1 text-left ${fresh && !isSelected ? 'font-semibold text-railfg/95' : ''}`}>
+          {humanizeFeature(f.name)}
+        </span>
+        {fresh && (
+          <span
+            title="New — not opened yet"
+            aria-label="New"
+            className="shrink-0 w-1.5 h-1.5 rounded-full bg-iris"
+          />
+        )}
         <span className="flex items-center gap-1 shrink-0">
           {types.map((t) => (
             <span

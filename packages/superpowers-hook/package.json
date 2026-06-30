@@ -1,6 +1,6 @@
 {
   "name": "@signoff/superpowers-hook",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "SignOff PreToolUse hook — gates implementation behind vault approval",
   "type": "module",
   "main": "dist/cli.js",

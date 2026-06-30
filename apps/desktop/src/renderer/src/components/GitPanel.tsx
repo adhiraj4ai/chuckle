@@ -113,6 +113,8 @@ export function GitPanel({ vaultPath, onClose }: Props): React.ReactElement {
   const behind = syncState?.behind ?? 0
   const hasRemote = syncState?.hasRemote ?? false
   const hasUpstream = syncState?.hasUpstream ?? false
+  const ghMatch = remote?.match(/github\.com[:/]([^/]+)\/(.+?)(?:\.git)?$/)
+  const webUrl = ghMatch ? `https://github.com/${ghMatch[1]}/${ghMatch[2]}` : null
 
   return (
     <div className="fixed inset-0 z-30 flex justify-end bg-ink/30 backdrop-blur-sm" onClick={onClose}>
@@ -123,7 +125,20 @@ export function GitPanel({ vaultPath, onClose }: Props): React.ReactElement {
         <header className="px-5 h-14 flex items-center justify-between border-b border-border shrink-0">
           <div className="min-w-0">
             <h2 className="text-[14px] font-semibold text-fg">Source control</h2>
-            <p className="text-[11.5px] font-mono text-fg/45 truncate">{repoLabel(syncState, remote)}</p>
+            {webUrl ? (
+              <button
+                onClick={() => { void window.signoff.openExternal(webUrl).catch(() => {}) }}
+                title="Open on GitHub"
+                className="text-[11.5px] font-mono text-fg/45 hover:text-iris truncate max-w-full inline-flex items-center gap-1"
+              >
+                {repoLabel(syncState, remote)}
+                <svg viewBox="0 0 12 12" className="w-2.5 h-2.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.4">
+                  <path d="M4.5 2.5h5v5M9.5 2.5l-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            ) : (
+              <p className="text-[11.5px] font-mono text-fg/45 truncate">{repoLabel(syncState, remote)}</p>
+            )}
           </div>
           <button
             onClick={onClose}

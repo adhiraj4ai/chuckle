@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { Sidebar } from '@renderer/components/Sidebar'
 import type { FeatureEntry } from '@shared/ipc-types'
 
@@ -79,5 +79,22 @@ describe('Sidebar', () => {
     render(<Sidebar vaultName="vault" features={[]} selected={null} onSelect={() => {}} onSync={onSync} />)
     fireEvent.click(screen.getByText('Sync'))
     expect(onSync).toHaveBeenCalled()
+  })
+
+  it('marks features reported as new with a "New" indicator and leaves others unmarked', () => {
+    render(
+      <Sidebar
+        vaultName="vault"
+        features={features}
+        selected={null}
+        onSelect={() => {}}
+        onSync={() => {}}
+        isNew={(name) => name === 'payment-gw'}
+      />
+    )
+    const newRow = screen.getByLabelText('payment-gw')
+    const seenRow = screen.getByLabelText('user-auth')
+    expect(within(newRow).getByTitle('New — not opened yet')).toBeInTheDocument()
+    expect(within(seenRow).queryByTitle('New — not opened yet')).not.toBeInTheDocument()
   })
 })

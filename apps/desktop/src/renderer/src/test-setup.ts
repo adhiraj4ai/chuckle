@@ -2,6 +2,23 @@ import { vi } from 'vitest'
 import '@testing-library/jest-dom'
 import type { SignoffAPI } from '@shared/ipc-types'
 
+// jsdom in this setup ships no localStorage; the app reads it during render
+// (theme, auto-sync interval, seen-features). Provide a minimal in-memory shim.
+if (typeof window.localStorage === 'undefined') {
+  const store = new Map<string, string>()
+  const localStorageShim: Storage = {
+    get length() {
+      return store.size
+    },
+    clear: () => store.clear(),
+    getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+    key: (i: number) => Array.from(store.keys())[i] ?? null,
+    removeItem: (k: string) => void store.delete(k),
+    setItem: (k: string, v: string) => void store.set(k, String(v)),
+  }
+  Object.defineProperty(window, 'localStorage', { value: localStorageShim, writable: true })
+}
+
 const mockSignoff: SignoffAPI = {
   vault: {
     list: vi.fn(),
@@ -20,6 +37,7 @@ const mockSignoff: SignoffAPI = {
     connectRemote: vi.fn(),
     clone: vi.fn(),
     syncState: vi.fn().mockResolvedValue({ branch: 'main', hasRemote: false, hasUpstream: false, ahead: 0, behind: 0 }),
+    connectClaude: vi.fn().mockResolvedValue({ settingsPath: '/p/.claude/settings.json' }),
   },
   features: {
     list: vi.fn(),

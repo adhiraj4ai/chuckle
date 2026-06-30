@@ -39,6 +39,21 @@ This is an npm-workspaces monorepo with three pieces:
 | [`packages/mcp-server`](packages/mcp-server) | MCP server exposing three tools to Claude Code: **`publish_document`**, **`check_approval`**, **`list_pending`**. |
 | [`apps/desktop`](apps/desktop) | Electron + React review app for humans — review workflow, threaded discussion, git sync, multi-vault switching, and rich markdown (Mermaid, KaTeX, syntax highlighting) with light/dark themes. |
 
+### Turn on the gate in Claude Code
+
+Install the plugin (ships the hook + MCP server + workflow skill):
+
+```bash
+claude plugin marketplace add adhiraj4ai/signoff
+claude plugin install signoff@signoff --scope project
+```
+
+The plugin invokes `@signoff/mcp-server` and `@signoff/superpowers-hook` via
+`npx`, so those packages must be available from npm.
+
+Or click **Connect to Claude Code** in the desktop app's status bar. See
+[`docs/superpowers-integration.md`](docs/superpowers-integration.md).
+
 ## Install
 
 Download the latest installer from the [**Releases**](https://github.com/adhiraj4ai/signoff/releases) page:

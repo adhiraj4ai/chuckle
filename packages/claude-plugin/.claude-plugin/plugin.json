@@ -1,0 +1,8 @@
+{
+  "name": "signoff",
+  "version": "0.1.2",
+  "description": "Gate code changes behind human approval of spec and plan documents.",
+  "mcpServers": "./.mcp.json",
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills"
+}

@@ -23,6 +23,7 @@ const api: SignoffAPI = {
     connectRemote: (vaultPath, url) => ipcRenderer.invoke('vault:connect-remote', { vaultPath, url }),
     clone: (url, destDir) => ipcRenderer.invoke('vault:clone', { url, destDir }),
     syncState: (vaultPath) => ipcRenderer.invoke('vault:sync-state', { vaultPath }),
+    connectClaude: (vaultPath) => ipcRenderer.invoke('vault:connect-claude', { vaultPath }),
   },
   features: {
     list: (vaultPath) => ipcRenderer.invoke('features:list', { vaultPath }),

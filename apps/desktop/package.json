@@ -1,6 +1,6 @@
 {
   "name": "@signoff/desktop",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "SignOff desktop app — vault UI for document review and approval",
   "author": "Rajan Adhikari",
   "homepage": "https://github.com/adhiraj4ai/signoff",

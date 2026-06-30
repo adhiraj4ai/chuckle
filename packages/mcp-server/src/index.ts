@@ -5,15 +5,22 @@ import fs from "node:fs";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { createServer } from "./server.js";
 
-function parseVaultArg(argv: string[]): string {
+/**
+ * Resolve the vault directory with this precedence:
+ *   1. explicit `--vault <path>`
+ *   2. `$CLAUDE_PROJECT_DIR/.signoff` (set by Claude Code for plugin/hook procs)
+ *   3. `<cwd>/.signoff` (final fallback)
+ * Pure + exported so it is unit-testable without spawning the process.
+ */
+export function resolveVaultPath(
+  argv: string[],
+  env: NodeJS.ProcessEnv,
+  cwd: string
+): string {
   const idx = argv.indexOf("--vault");
-  if (idx === -1 || idx + 1 >= argv.length) {
-    process.stderr.write(
-      "Usage: signoff-mcp --vault /path/to/vault\n"
-    );
-    process.exit(1);
-  }
-  return argv[idx + 1];
+  if (idx !== -1 && idx + 1 < argv.length) return argv[idx + 1];
+  if (env.CLAUDE_PROJECT_DIR) return path.join(env.CLAUDE_PROJECT_DIR, ".signoff");
+  return path.join(cwd, ".signoff");
 }
 
 /**
@@ -38,11 +45,14 @@ export function validateVaultPath(vaultPath: string): void {
 }
 
 async function main() {
-  const vaultPath = parseVaultArg(process.argv.slice(2));
+  const vaultPath = resolveVaultPath(process.argv.slice(2), process.env, process.cwd());
   try {
     validateVaultPath(vaultPath);
   } catch (err) {
-    process.stderr.write(`Error: ${err instanceof Error ? err.message : String(err)}\n`);
+    process.stderr.write(
+      `Error: ${err instanceof Error ? err.message : String(err)}\n` +
+        `Pass --vault <path>, set CLAUDE_PROJECT_DIR, or run from a project containing .signoff.\n`
+    );
     process.exit(1);
   }
   const server = createServer(vaultPath);

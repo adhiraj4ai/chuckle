@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "signoff": {
+      "command": "npx",
+      "args": ["-y", "@signoff/mcp-server", "--vault", "${CLAUDE_PROJECT_DIR}/.signoff"]
+    }
+  }
+}
