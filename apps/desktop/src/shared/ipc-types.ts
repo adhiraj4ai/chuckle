@@ -38,8 +38,10 @@ export type {
   CategoryColor,
 }
 
-// Value re-exports (runtime helpers shared by main + renderer)
-export { CATEGORY_COLORS, slugify, normalizeTags } from '@signoff/vault-core'
+// Value re-exports (runtime helpers shared by main + renderer). Imported from the
+// pure `categories` subpath — NOT the package barrel — so the renderer bundle does
+// not pull in vault-core's git/simple-git (Node-only) code.
+export { CATEGORY_COLORS, slugify, normalizeTags } from '@signoff/vault-core/categories'
 
 export interface FeatureEntry {
   name: string
