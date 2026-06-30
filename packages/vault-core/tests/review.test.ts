@@ -93,7 +93,7 @@ describe("deriveStatus", () => {
 function recWith(states: Record<string, "approved" | "changes_requested" | "in_review">, hash = "h"): ApprovalRecord {
   const reviewers: ApprovalRecord["reviewers"] = {};
   for (const [email, status] of Object.entries(states)) {
-    reviewers[email] = { status, content_hash: status === "approved" ? hash : undefined } as never;
+    reviewers[email] = { status, at: "2026-06-30T00:00:00Z", ...(status === "approved" && { content_hash: hash }) };
   }
   return {
     document: "specs/x.md", feature: "x", type: "spec", workflow: "spec",
@@ -124,6 +124,7 @@ describe("deriveStatus threshold mode", () => {
 
   it("clamps min<=0 / NaN up to 1", () => {
     expect(deriveStatus(recWith({ "a@o.c": "approved" }), req, "h", { mode: "threshold", minApprovals: 0 })).toBe("approved");
+    expect(deriveStatus(recWith({ "a@o.c": "approved" }), req, "h", { mode: "threshold", minApprovals: NaN })).toBe("approved");
   });
 
   it("counts only FRESH approvals (stale approval does not count)", () => {
