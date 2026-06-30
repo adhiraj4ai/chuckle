@@ -1,6 +1,6 @@
 import path from "node:path";
 import {
-  getApprovalStatus, readActiveFeature, readWorkflows, getWorkflowForType,
+  getApprovalStatus, isClearedForCode, readActiveFeature, readWorkflows, getWorkflowForType,
   readManifest, getFeatureDoc, manifestFeatureNames, type DocumentType,
 } from "@signoff/vault-core";
 import fs from "node:fs/promises";
@@ -66,20 +66,23 @@ export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision
     // (it becomes registered on submit; spec-gating applies once registered).
     if (underDocRoot && isMarkdown(rel) && classifyDoc(rel) === "plan") return { allow: true };
 
-    // Otherwise this is code: gate on the active feature's plan approval.
+    // Otherwise this is code: gate on the active feature via tier-aware isClearedForCode.
     const pointer = await readActiveFeature(event.cwd);
     if (!pointer) {
       return { allow: false, reason: "🔒 Signoff: no active feature. Submit a spec first before making code changes." };
     }
-    const status = await getApprovalStatus(pointer.vaultPath, pointer.feature, "plan");
-    if (status.status === "approved") return { allow: true };
+    const clearance = await isClearedForCode(pointer.vaultPath, pointer.feature);
+    if (clearance.cleared) return { allow: true };
 
     let who = "";
     try {
-      const wf = getWorkflowForType(await readWorkflows(pointer.vaultPath), "plan");
+      const wf = getWorkflowForType(await readWorkflows(pointer.vaultPath), clearance.artifact);
       if (wf.required_approvers.length) who = `\nAwaiting approval from: ${wf.required_approvers.join(", ")}`;
     } catch { /* decorative only */ }
-    return { allow: false, reason: `🔒 Signoff: code changes are gated.\nFeature "${pointer.feature}" — plan status: ${status.status}.${who}` };
+    return {
+      allow: false,
+      reason: `🔒 Signoff: code changes are gated.\nFeature "${pointer.feature}" (${clearance.tier}) — ${clearance.artifact} status: ${clearance.status}.${who}`,
+    };
   } catch (err) {
     return { allow: false, reason: `🔒 Signoff: approval gate could not verify status (${err instanceof Error ? err.message : String(err)}). Blocking by default.` };
   }

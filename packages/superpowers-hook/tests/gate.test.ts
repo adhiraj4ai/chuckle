@@ -10,6 +10,7 @@ import {
   readManifest,
   writeManifest,
   setFeatureDoc,
+  setFeatureTier,
 } from "@signoff/vault-core";
 import type { ApprovalRecord } from "@signoff/vault-core";
 import { evaluateGate } from "../src/gate.js";
@@ -207,6 +208,29 @@ describe("evaluateGate", () => {
     });
     const decision = await evaluateGate(writeEvent("src/index.ts"));
     expect(decision.allow).toBe(false);
+  });
+
+  // --- Tier-aware code gating ----------------------------------------------
+
+  it("allows code for a light-tier feature once its spec is approved", async () => {
+    // Set feature tier to light, register + approve its spec, set active-feature.
+    await registerDoc("x", "spec", "docs/specs/2026-07-01-x-design.md");
+    await approve("x", "spec");
+    const m = setFeatureTier(await readManifest(vaultPath), "x", "light");
+    await writeManifest(vaultPath, m);
+    await writeActiveFeature(projectRoot, { feature: "x", vaultPath });
+    const decision = await evaluateGate(writeEvent("src/app.ts"));
+    expect(decision.allow).toBe(true);
+  });
+
+  it("blocks code for a standard-tier feature with only the spec approved", async () => {
+    // Register + approve spec only; no plan; feature stays standard (default).
+    await registerDoc("x", "spec", "docs/specs/2026-07-01-x-design.md");
+    await approve("x", "spec");
+    await writeActiveFeature(projectRoot, { feature: "x", vaultPath });
+    const decision = await evaluateGate(writeEvent("src/app.ts"));
+    expect(decision.allow).toBe(false);
+    expect(decision.reason).toMatch(/plan/);
   });
 
   // --- No-target events are always allowed ---------------------------------
