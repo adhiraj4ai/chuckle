@@ -12,9 +12,9 @@ const gate = path.join(root, "dist", "gate.mjs");
 const mcp = path.join(root, "dist", "mcp.mjs");
 
 /** Run a bundled entrypoint, returning its exit code (and stdin if provided). */
-async function runNode(file: string, stdin?: string, env?: NodeJS.ProcessEnv): Promise<number> {
+async function runNode(file: string, stdin?: string, env?: NodeJS.ProcessEnv, cwd?: string): Promise<number> {
   return new Promise((resolve) => {
-    const child = execFile("node", [file], { env: { ...process.env, ...env } }, () => {});
+    const child = execFile("node", [file], { env: { ...process.env, ...env }, cwd }, () => {});
     if (stdin !== undefined) {
       child.stdin?.end(stdin);
     }
@@ -41,8 +41,8 @@ describe("bundled plugin binaries", () => {
   it("mcp.mjs exits 1 when no vault can be found", async () => {
     const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "signoff-mcp-"));
     // no --vault, no CLAUDE_PROJECT_DIR; resolves to cwd/.signoff which is absent
-    const code = await runNode(mcp, undefined, { CLAUDE_PROJECT_DIR: "" });
+    const code = await runNode(mcp, undefined, { CLAUDE_PROJECT_DIR: "" }, cwd);
     // run with cwd set so the fallback points at the empty temp dir
-    expect([1, -1]).toContain(code); // 1 = clean validate failure
+    expect(code).toBe(1); // clean validate failure
   });
 });
