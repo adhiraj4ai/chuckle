@@ -2,7 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import crypto from "node:crypto";
 import type { DocumentType } from "./types.js";
-import type { Category } from "./categories.js";
+import type { Category, CategoryColor } from "./categories.js";
+import { CATEGORY_COLORS, slugify, normalizeTags } from "./categories.js";
 import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
 export interface FeatureDocs {
@@ -93,4 +94,79 @@ export function resolveDocPath(
 
 export function hashContent(buf: Buffer | string): string {
   return crypto.createHash("sha256").update(buf).digest("hex");
+}
+
+export function listCategories(m: Manifest): Category[] {
+  return m.categories;
+}
+
+export function upsertCategory(m: Manifest, cat: Category): Manifest {
+  const idx = m.categories.findIndex((c) => c.id === cat.id);
+  const categories =
+    idx === -1
+      ? [...m.categories, cat]
+      : m.categories.map((c) => (c.id === cat.id ? cat : c));
+  return { ...m, categories };
+}
+
+export function removeCategory(m: Manifest, id: string): Manifest {
+  const categories = m.categories.filter((c) => c.id !== id);
+  const features: Record<string, FeatureDocs> = {};
+  for (const [name, docs] of Object.entries(m.features)) {
+    if (docs.category === id) {
+      const { category: _drop, ...rest } = docs;
+      features[name] = rest;
+    } else {
+      features[name] = docs;
+    }
+  }
+  return { ...m, categories, features };
+}
+
+export function setFeatureCategory(
+  m: Manifest,
+  feature: string,
+  categoryId: string | null
+): Manifest {
+  const current = m.features[feature] ?? {};
+  const next: FeatureDocs = { ...current };
+  if (categoryId) next.category = categoryId;
+  else delete next.category;
+  return { ...m, features: { ...m.features, [feature]: next } };
+}
+
+export function setFeatureTags(m: Manifest, feature: string, tags: string[]): Manifest {
+  const current = m.features[feature] ?? {};
+  const normalized = normalizeTags(tags);
+  const next: FeatureDocs = { ...current };
+  if (normalized.length) next.tags = normalized;
+  else delete next.tags;
+  return { ...m, features: { ...m.features, [feature]: next } };
+}
+
+export function ensureCategory(
+  m: Manifest,
+  name: string,
+  color?: CategoryColor
+): { manifest: Manifest; id: string } {
+  const existing = m.categories.find(
+    (c) => c.name.toLowerCase() === name.trim().toLowerCase()
+  );
+  if (existing) return { manifest: m, id: existing.id };
+
+  // Unique id: slug, with -2/-3 suffixes on collision.
+  const baseId = slugify(name);
+  let id = baseId;
+  let n = 2;
+  while (m.categories.some((c) => c.id === id)) id = `${baseId}-${n++}`;
+
+  // Color: caller-specified, else first unused, else round-robin by count.
+  const used = new Set(m.categories.map((c) => c.color));
+  const chosen =
+    color ??
+    CATEGORY_COLORS.find((c) => !used.has(c)) ??
+    CATEGORY_COLORS[m.categories.length % CATEGORY_COLORS.length];
+
+  const manifest = upsertCategory(m, { id, name: name.trim(), color: chosen });
+  return { manifest, id };
 }

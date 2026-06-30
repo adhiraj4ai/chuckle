@@ -48,6 +48,12 @@ export {
   manifestFeatureNames,
   resolveDocPath,
   hashContent,
+  listCategories,
+  upsertCategory,
+  removeCategory,
+  setFeatureCategory,
+  setFeatureTags,
+  ensureCategory,
 } from "./manifest.js";
 
 // Categories & tags
