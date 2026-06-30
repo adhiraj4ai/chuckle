@@ -38,6 +38,7 @@ import {
   classifyGitError,
   type VaultInfo,
   type VaultWorkflows,
+  type WorkflowConfig,
   type ApprovalRecord,
   type DocumentType,
   type ReviewAction,
@@ -370,8 +371,9 @@ export async function reviewAction(
 ): Promise<ReviewResult> {
   const { email } = await resolveVaultAuthor(vaultPath)
   // enforcement: when a required list exists, only its members may act (before the transaction)
-  let required: string[] = []
-  try { required = getWorkflowForType(await readWorkflows(vaultPath), type).required_approvers } catch { required = [] }
+  let wf: WorkflowConfig | null = null
+  try { wf = getWorkflowForType(await readWorkflows(vaultPath), type) } catch { wf = null }
+  const required = wf?.required_approvers ?? []
   if (required.length && !required.includes(email)) {
     throw new Error(`only ${required.join(', ')} may review ${feature}/${type}`)
   }
@@ -382,7 +384,7 @@ export async function reviewAction(
     let hash: string | undefined
     try { hash = abs ? hashContent(await fs.readFile(abs)) : undefined } catch { hash = undefined }
     let updated = applyReviewerAction(record, email, action, new Date().toISOString(), hash, message ?? null)
-    updated = { ...updated, status: deriveStatus(updated, required, hash ?? null) }
+    updated = { ...updated, status: deriveStatus(updated, required, hash ?? null, { mode: wf?.approval_mode, minApprovals: wf?.min_approvals }) }
     await writeApproval(vaultPath, updated)
     return { files: [approvalRelPath(feature, type)], message: `review: ${action} ${feature}/${type} by ${email}` }
   })

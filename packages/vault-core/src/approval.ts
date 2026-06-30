@@ -6,6 +6,7 @@ import type {
   ApprovalStatus,
   DocumentType,
   CheckApprovalResult,
+  ApprovalMode,
 } from "./types.js";
 import { deriveStatus } from "./review.js";
 import { readWorkflows, getWorkflowForType } from "./workflow.js";
@@ -77,8 +78,13 @@ export async function getApprovalStatus(
   // null = required-approver set is UNKNOWN (workflow missing/corrupt). Fail
   // closed: deriveStatus must never return "approved" when this is null.
   let required: string[] | null = null;
+  let mode: ApprovalMode | undefined;
+  let minApprovals = 1;
   try {
-    required = getWorkflowForType(await readWorkflows(vaultPath), type).required_approvers;
+    const wf = getWorkflowForType(await readWorkflows(vaultPath), type);
+    required = wf.required_approvers;
+    mode = wf.approval_mode;
+    minApprovals = wf.min_approvals;
   } catch {
     required = null;
   }
@@ -90,7 +96,7 @@ export async function getApprovalStatus(
     currentHash = null;
   }
 
-  const status = deriveStatus(record, required, currentHash);
+  const status = deriveStatus(record, required, currentHash, { mode, minApprovals });
   if (status === "approved") {
     const approvedEntry = [...record.history].reverse().find((e) => e.action === "approved");
     return { status, approved_by: approvedEntry?.by, approved_at: approvedEntry?.at };
