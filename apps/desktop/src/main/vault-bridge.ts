@@ -26,6 +26,9 @@ import {
   removeCategory,
   setFeatureCategory,
   setFeatureTags,
+  setFeatureTier,
+  normalizeTier,
+  type Tier,
   resolveDocPath,
   hashContent,
   isStale,
@@ -341,6 +344,7 @@ export async function listFeatures(vaultPath: string): Promise<FeatureEntry[]> {
       plan: planStatus.status,
       category: (docs?.category && byId.get(docs.category)) || null,
       tags: docs?.tags ?? [],
+      tier: normalizeTier(docs?.tier),
     })
   }
   return results
@@ -383,6 +387,17 @@ export async function setFeatureTagsBridge(
   return transact(vaultPath, async () => {
     await writeManifest(vaultPath, setFeatureTags(await readManifest(vaultPath), feature, tags))
     return { files: [manifestRelPath], message: `chore: set tags of ${feature}` }
+  })
+}
+
+export async function setFeatureTierBridge(
+  vaultPath: string,
+  feature: string,
+  tier: Tier,
+): Promise<ReviewResult> {
+  return transact(vaultPath, async () => {
+    await writeManifest(vaultPath, setFeatureTier(await readManifest(vaultPath), feature, tier))
+    return { files: [manifestRelPath], message: `feature: set tier ${feature} = ${tier}` }
   })
 }
 
