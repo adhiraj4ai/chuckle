@@ -22,6 +22,7 @@ async function approve(feature: string, type: "spec" | "plan", relPath: string):
   let rec = await readApproval(vaultPath, feature, type);
   rec = applyReviewerAction(rec!, "a@o.c", "start_review", "2026-06-30T00:00:00Z", hash, null);
   rec = applyReviewerAction(rec, "a@o.c", "approve", "2026-06-30T00:01:00Z", hash, null);
+  rec = { ...rec, status: "approved" };
   await writeApproval(vaultPath, rec);
 }
 

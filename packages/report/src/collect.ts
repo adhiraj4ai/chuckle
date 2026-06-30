@@ -31,25 +31,14 @@ export interface Report {
 const TYPES: DocumentType[] = ["spec", "plan"];
 
 /** True when an approval exists for this doc and the doc has changed since
- *  (vault-core isStale). Any read error ⇒ false (never crash a report).
- *  Falls back to checking reviewer states directly when record.status hasn't
- *  been flushed to "approved" (e.g. record written via applyReviewerAction
- *  without a separate status update). */
+ *  (vault-core isStale). Any read error ⇒ false (never crash a report). */
 async function docStale(vaultPath: string, manifest: Manifest, feature: string, type: DocumentType): Promise<boolean> {
   try {
     const record = await readApproval(vaultPath, feature, type);
     if (!record) return false;
     const abs = resolveDocPath(vaultPath, manifest, feature, type);
     if (!abs) return false;
-    const currentHash = hashContent(await fs.readFile(abs));
-    // isStale uses record.status; fall back to reviewer-level check when
-    // record.status hasn't been updated (applyReviewerAction doesn't flush it).
-    if (isStale(record, currentHash)) return true;
-    // Reviewer-level stale: any reviewer approved with an old hash.
-    const reviewers = record.reviewers ?? {};
-    return Object.values(reviewers).some(
-      (r) => r.status === "approved" && r.content_hash !== undefined && r.content_hash !== currentHash
-    );
+    return isStale(record, hashContent(await fs.readFile(abs)));
   } catch {
     return false;
   }
