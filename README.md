@@ -6,6 +6,8 @@ SignOff puts a human approval gate in front of spec and plan documents, so an AI
 
 > Repository: [`adhiraj4ai/signoff`](https://github.com/adhiraj4ai/signoff) · the product is **SignOff**.
 
+> **📖 New to SignOff? Read the [Operation Guide](docs/guide/README.md)** — a task-oriented, chapter-by-chapter guide for developers, reviewers, and admins.
+
 ---
 
 ## Why
