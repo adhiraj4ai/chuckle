@@ -112,3 +112,12 @@ describe("isClearedForCode transitively reflects the diagram block", () => {
     expect((await isClearedForCode(vaultPath, "x")).cleared).toBe(true);
   });
 });
+
+describe("new vault default require_diagram", () => {
+  it("VaultManager.create seeds spec.require_diagram=true, plan/adr off", async () => {
+    const wf = await readWorkflows(vaultPath); // vault created in beforeEach
+    expect(wf.spec.require_diagram).toBe(true);
+    expect(wf.plan.require_diagram ?? false).toBe(false);
+    expect(wf.adr.require_diagram ?? false).toBe(false);
+  });
+});

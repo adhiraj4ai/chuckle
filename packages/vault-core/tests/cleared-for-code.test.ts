@@ -28,7 +28,7 @@ afterEach(async () => { await fs.rm(project, { recursive: true, force: true }); 
 
 async function approve(feature: "x", type: "spec" | "plan", who: string[], mode: "unanimous" | "threshold", min: number): Promise<void> {
   const rel = `docs/${feature}-${type}.md`;
-  await fs.writeFile(path.join(project, rel), `# ${type}`);
+  await fs.writeFile(path.join(project, rel), `# ${type}\n\n\`\`\`mermaid\ngraph TD; A-->B\n\`\`\`\n`);
   const v = await VaultManager.open(vaultPath);
   await v.submitForReview(feature, type, rel, "a@o.c", "A");
   const wf = await readWorkflows(vaultPath);
