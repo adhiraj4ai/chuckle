@@ -42,6 +42,16 @@ is **non-blocking** — a pending or absent ADR never blocks code, so write and
 publish it in parallel with the normal spec → plan → implement flow. Do not
 wait on ADR approval to proceed.
 
+## Diagrams
+
+Some projects require a **diagram** before a spec or plan can be approved (a
+per-workflow "require a diagram" setting). When you write a spec or plan, include
+an architecture diagram as a fenced ` ```mermaid ` block (preferred — versionable
+and diffable) or an embedded image `![alt](path)`. If `check_approval` keeps
+returning a non-approved status with `missing_diagram: true`, the document has no
+diagram yet — add one and re-publish. A missing diagram never blocks *authoring*;
+it only holds back approval.
+
 ## Rules
 
 - **If the hook blocks an edit, publish the relevant document and hand off.**

@@ -20,6 +20,9 @@ export type {
 // Feature inference + validation
 export { inferFeatureName, validateFeatureName } from "./feature.js";
 
+// Diagram detection
+export { hasDiagram } from "./diagram.js";
+
 // Filesystem helpers (atomic writes, guarded JSON parse)
 export { writeFileAtomic, writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 

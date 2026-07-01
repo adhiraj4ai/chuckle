@@ -17,6 +17,7 @@ import type {
   Category,
   CategoryColor,
   Tier,
+  CheckApprovalResult,
 } from '@signoff/vault-core'
 
 export type {
@@ -38,6 +39,7 @@ export type {
   Category,
   CategoryColor,
   Tier,
+  CheckApprovalResult,
 }
 
 // Value re-exports (runtime helpers shared by main + renderer). Imported from the
@@ -101,7 +103,7 @@ export type IpcChannels =
   | 'features:list'
   | 'categories:list' | 'categories:upsert' | 'categories:remove'
   | 'feature:set-category' | 'feature:set-tags' | 'feature:set-tier'
-  | 'document:read' | 'document:write' | 'document:get-approval' | 'document:is-stale'
+  | 'document:read' | 'document:write' | 'document:get-approval' | 'document:is-stale' | 'document:get-status'
   | 'review:action'
   | 'comments:read' | 'comments:add-thread' | 'comments:add-reply' | 'comments:set-resolved'
   | 'project:read-claude-md'
@@ -145,6 +147,7 @@ export interface SignoffAPI {
     write(vaultPath: string, feature: string, type: DocumentType, content: string): Promise<ReviewResult>
     getApproval(vaultPath: string, feature: string, type: DocumentType): Promise<ApprovalRecord | null>
     isStale(vaultPath: string, feature: string, type: DocumentType): Promise<boolean>
+    getStatus(vaultPath: string, feature: string, type: DocumentType): Promise<CheckApprovalResult>
   }
   review: {
     action(vaultPath: string, feature: string, type: DocumentType, action: ReviewAction, message?: string | null): Promise<ReviewResult>

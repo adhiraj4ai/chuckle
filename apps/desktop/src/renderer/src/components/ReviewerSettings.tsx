@@ -19,6 +19,9 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
   const [adrApprovers, setAdrApprovers] = useState('')
   const [adrMin, setAdrMin] = useState(1)
   const [adrMode, setAdrMode] = useState<Mode>('unanimous')
+  const [specRequireDiagram, setSpecRequireDiagram] = useState(false)
+  const [planRequireDiagram, setPlanRequireDiagram] = useState(false)
+  const [adrRequireDiagram, setAdrRequireDiagram] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,12 +38,15 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
         setSpecApprovers(w.spec.required_approvers.join(', '))
         setSpecMin(clampMin(w.spec.min_approvals))
         setSpecMode(w.spec.approval_mode === 'threshold' ? 'threshold' : 'unanimous')
+        setSpecRequireDiagram(w.spec.require_diagram === true)
         setPlanApprovers(w.plan.required_approvers.join(', '))
         setPlanMin(clampMin(w.plan.min_approvals))
         setPlanMode(w.plan.approval_mode === 'threshold' ? 'threshold' : 'unanimous')
+        setPlanRequireDiagram(w.plan.require_diagram === true)
         setAdrApprovers(w.adr.required_approvers.join(', '))
         setAdrMin(clampMin(w.adr.min_approvals))
         setAdrMode(w.adr.approval_mode === 'threshold' ? 'threshold' : 'unanimous')
+        setAdrRequireDiagram(w.adr.require_diagram === true)
       })
       .catch((e) => {
         // Escape the "Loading…" state: fall back to defaults + show an error.
@@ -53,6 +59,9 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
         setSpecMode('unanimous')
         setPlanMode('unanimous')
         setAdrMode('unanimous')
+        setSpecRequireDiagram(false)
+        setPlanRequireDiagram(false)
+        setAdrRequireDiagram(false)
         setError(`Couldn't load reviewer settings: ${e instanceof Error ? e.message : String(e)}`)
       })
     return () => { alive = false }
@@ -65,9 +74,9 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
     const parseEmails = (csv: string): string[] =>
       csv.split(',').map((s) => s.trim()).filter(Boolean)
     const next: VaultWorkflows = {
-      spec: { ...workflows.spec, required_approvers: parseEmails(specApprovers), min_approvals: clampMin(specMin), approval_mode: specMode },
-      plan: { ...workflows.plan, required_approvers: parseEmails(planApprovers), min_approvals: clampMin(planMin), approval_mode: planMode },
-      adr: { ...workflows.adr, required_approvers: parseEmails(adrApprovers), min_approvals: clampMin(adrMin), approval_mode: adrMode },
+      spec: { ...workflows.spec, required_approvers: parseEmails(specApprovers), min_approvals: clampMin(specMin), approval_mode: specMode, require_diagram: specRequireDiagram },
+      plan: { ...workflows.plan, required_approvers: parseEmails(planApprovers), min_approvals: clampMin(planMin), approval_mode: planMode, require_diagram: planRequireDiagram },
+      adr: { ...workflows.adr, required_approvers: parseEmails(adrApprovers), min_approvals: clampMin(adrMin), approval_mode: adrMode, require_diagram: adrRequireDiagram },
     }
     try {
       await window.signoff.workflows.write(vaultPath, next)
@@ -125,6 +134,10 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
             </label>
           )}
         </fieldset>
+        <label className="flex items-center gap-2 text-[13px] text-fg/80">
+          <input type="checkbox" checked={specRequireDiagram} onChange={(e) => setSpecRequireDiagram(e.target.checked)} aria-label="Spec require a diagram" />
+          Require a diagram
+        </label>
       </section>
 
       <section className="flex flex-col gap-2">
@@ -165,6 +178,10 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
             </label>
           )}
         </fieldset>
+        <label className="flex items-center gap-2 text-[13px] text-fg/80">
+          <input type="checkbox" checked={planRequireDiagram} onChange={(e) => setPlanRequireDiagram(e.target.checked)} aria-label="Plan require a diagram" />
+          Require a diagram
+        </label>
       </section>
 
       <section className="flex flex-col gap-2">
@@ -205,6 +222,10 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
             </label>
           )}
         </fieldset>
+        <label className="flex items-center gap-2 text-[13px] text-fg/80">
+          <input type="checkbox" checked={adrRequireDiagram} onChange={(e) => setAdrRequireDiagram(e.target.checked)} aria-label="ADR require a diagram" />
+          Require a diagram
+        </label>
       </section>
 
       {error && (

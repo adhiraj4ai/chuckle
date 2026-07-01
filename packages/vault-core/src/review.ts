@@ -55,10 +55,13 @@ export function deriveStatus(
   record: ApprovalRecord,
   requiredApprovers: string[] | null,
   currentHash: string | null,
-  options?: { mode?: ApprovalMode; minApprovals?: number }
+  options?: { mode?: ApprovalMode; minApprovals?: number; diagramOk?: boolean }
 ): ApprovalStatus {
   const reviewers = record.reviewers ?? {};
   const entries = Object.entries(reviewers);
+  // A required-but-missing diagram is an unmet content precondition on approval:
+  // when false, an otherwise-approved doc must NOT be "approved" (mirrors staleness).
+  const diagramOk = options?.diagramOk !== false;
   const approvedFresh = (s: { status: ReviewerStatus; content_hash?: string }) =>
     s.status === "approved" && (!currentHash || s.content_hash === currentHash);
 
@@ -68,8 +71,7 @@ export function deriveStatus(
   }
 
   if (requiredApprovers === null) {
-    // Required set unknown — fail closed. The doc can never be "approved" here;
-    // at most reflect that review is underway.
+    // Required set unknown — fail closed; never "approved".
   } else if (requiredApprovers.length > 0) {
     if (options?.mode === "threshold") {
       const min = Math.min(
@@ -77,11 +79,11 @@ export function deriveStatus(
         Math.max(1, Math.floor(options.minApprovals ?? 1) || 1)
       );
       const freshCount = requiredApprovers.filter((e) => reviewers[e] && approvedFresh(reviewers[e])).length;
-      if (freshCount >= min) return "approved";
-    } else if (requiredApprovers.every((e) => reviewers[e] && approvedFresh(reviewers[e]))) {
+      if (freshCount >= min && diagramOk) return "approved";
+    } else if (requiredApprovers.every((e) => reviewers[e] && approvedFresh(reviewers[e])) && diagramOk) {
       return "approved";
     }
-  } else if (entries.some(([, s]) => approvedFresh(s))) {
+  } else if (entries.some(([, s]) => approvedFresh(s)) && diagramOk) {
     return "approved";
   }
 

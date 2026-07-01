@@ -55,6 +55,7 @@ const mockSignoff: SignoffAPI = {
     write: vi.fn(),
     getApproval: vi.fn(),
     isStale: vi.fn(),
+    getStatus: vi.fn(),
   },
   review: {
     action: vi.fn(),

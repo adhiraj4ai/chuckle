@@ -32,6 +32,7 @@ const DEFAULT_WORKFLOWS = {
     required_approvers: [] as string[],
     min_approvals: 1,
     approval_mode: "unanimous" as const,
+    require_diagram: true,
   },
   plan: {
     required_approvers: [] as string[],

@@ -19,7 +19,7 @@ beforeEach(async () => {
   projectRoot = path.join(tmp, "project");
   vaultPath = path.join(projectRoot, ".signoff");
   await fs.mkdir(path.join(projectRoot, "docs"), { recursive: true });
-  await fs.writeFile(path.join(projectRoot, "docs", "x.md"), "# x");
+  await fs.writeFile(path.join(projectRoot, "docs", "x.md"), "# x\n\n```mermaid\ngraph TD; A-->B\n```\n");
   await VaultManager.create(vaultPath, "proj");
   const v = await VaultManager.open(vaultPath);
   await v.submitForReview("x", "spec", "docs/x.md", "a@o.c", "A");

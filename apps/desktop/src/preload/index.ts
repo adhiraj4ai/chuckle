@@ -48,6 +48,8 @@ const api: SignoffAPI = {
       ipcRenderer.invoke('document:get-approval', { vaultPath, feature, type }),
     isStale: (vaultPath, feature, type) =>
       ipcRenderer.invoke('document:is-stale', { vaultPath, feature, type }),
+    getStatus: (vaultPath, feature, type) =>
+      ipcRenderer.invoke('document:get-status', { vaultPath, feature, type }),
   },
   review: {
     action: (vaultPath, feature, type, action, message) =>

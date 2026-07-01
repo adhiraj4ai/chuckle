@@ -11,6 +11,7 @@ import type {
 import { deriveStatus } from "./review.js";
 import { readWorkflows, getWorkflowForType } from "./workflow.js";
 import { readManifest, resolveDocPath, hashContent } from "./manifest.js";
+import { hasDiagram } from "./diagram.js";
 import { normalizeTier, tierGatingArtifact, tierForcesUnanimous, type Tier } from "./tiers.js";
 import { validateFeatureName } from "./feature.js";
 import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
@@ -77,33 +78,46 @@ export async function getApprovalStatus(
   const record = await readApproval(vaultPath, feature, type);
   if (!record) return { status: "not_found" };
 
-  // null = required-approver set is UNKNOWN (workflow missing/corrupt). Fail
-  // closed: deriveStatus must never return "approved" when this is null.
   let required: string[] | null = null;
   let mode: ApprovalMode | undefined;
   let minApprovals = 1;
+  let requireDiagram = false;
   try {
     const wf = getWorkflowForType(await readWorkflows(vaultPath), type);
     required = wf.required_approvers;
     mode = wf.approval_mode;
     minApprovals = wf.min_approvals ?? 1;
+    requireDiagram = wf.require_diagram === true;
   } catch {
     required = null;
   }
   let currentHash: string | null = null;
+  let content: string | null = null;
   try {
     const abs = resolveDocPath(vaultPath, await readManifest(vaultPath), feature, type);
-    if (abs) currentHash = hashContent(await fs.readFile(abs));
+    if (abs) {
+      const buf = await fs.readFile(abs);
+      currentHash = hashContent(buf);
+      content = buf.toString("utf-8");
+    }
   } catch {
     currentHash = null;
+    content = null;
   }
 
-  const status = deriveStatus(record, required, currentHash, { mode: opts?.forceMode ?? mode, minApprovals });
+  // Fail closed: if a diagram is required but content couldn't be read, treat the
+  // requirement as UNMET (we cannot prove a diagram exists).
+  const diagramOk = !requireDiagram || (content !== null && hasDiagram(content));
+  const missing_diagram = requireDiagram && !diagramOk;
+
+  const status = deriveStatus(record, required, currentHash, {
+    mode: opts?.forceMode ?? mode, minApprovals, diagramOk,
+  });
   if (status === "approved") {
     const approvedEntry = [...record.history].reverse().find((e) => e.action === "approved");
-    return { status, approved_by: approvedEntry?.by, approved_at: approvedEntry?.at };
+    return { status, approved_by: approvedEntry?.by, approved_at: approvedEntry?.at, ...(missing_diagram ? { missing_diagram } : {}) };
   }
-  return { status };
+  return { status, ...(missing_diagram ? { missing_diagram } : {}) };
 }
 
 /**

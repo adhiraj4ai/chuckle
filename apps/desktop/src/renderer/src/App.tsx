@@ -34,6 +34,7 @@ export function SelectedDocument({
 }): React.ReactElement {
   const [record, setRecord] = useState<ApprovalRecord | null | undefined>(undefined)
   const [workflow, setWorkflow] = useState<WorkflowConfig | undefined>(undefined)
+  const [missingDiagram, setMissingDiagram] = useState(false)
   const [reload, setReload] = useState(0)
   const [showDiscussion, setShowDiscussion] = useState(false)
   const [markdown, setMarkdown] = useState('')
@@ -46,16 +47,19 @@ export function SelectedDocument({
     Promise.all([
       window.signoff.document.getApproval(vaultPath, feature, type),
       window.signoff.workflows.read(vaultPath),
+      window.signoff.document.getStatus(vaultPath, feature, type),
     ])
-      .then(([r, w]) => {
+      .then(([r, w, statusRes]) => {
         if (!alive) return
         setRecord(r)
         setWorkflow(w?.[type])
+        setMissingDiagram(statusRes?.missing_diagram === true)
       })
       .catch(() => {
         if (!alive) return
         setRecord(null)
         setWorkflow(undefined)
+        setMissingDiagram(false)
       })
     return () => { alive = false }
   }, [vaultPath, feature, type, reload])
@@ -119,6 +123,7 @@ export function SelectedDocument({
             record={record}
             derivedStatus={docTypes.find((d) => d.type === type)?.status ?? 'not_found'}
             workflow={workflow}
+            missingDiagram={missingDiagram}
             onActionComplete={onDone}
           />
         )}

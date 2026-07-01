@@ -96,3 +96,16 @@ it('saves the adr workflow section', async () => {
   const written = vi.mocked(window.signoff.workflows.write).mock.calls[0][1] as never as { adr: { required_approvers: string[] } }
   expect(written.adr.required_approvers).toEqual(['arch@o.c'])
 })
+
+it('persists require_diagram per document type', async () => {
+  render(<ReviewerSettings vaultPath="/v" onClose={() => {}} />)
+  await waitFor(() => screen.getByDisplayValue('lead@org.com'))
+  // Toggle the Spec "Require a diagram" checkbox on.
+  const specSection = (await screen.findByRole('heading', { name: 'Spec' })).closest('section') as HTMLElement
+  fireEvent.click(within(specSection).getByLabelText(/require a diagram/i))
+  fireEvent.click(screen.getByRole('button', { name: /save/i }))
+  await waitFor(() => expect(window.signoff.workflows.write).toHaveBeenCalledWith('/v', expect.objectContaining({
+    spec: expect.objectContaining({ require_diagram: true }),
+    plan: expect.objectContaining({ require_diagram: false }),
+  })))
+})

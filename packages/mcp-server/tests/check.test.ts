@@ -8,6 +8,8 @@ import {
   appendHistory,
   readApproval,
   hashContent,
+  readWorkflows,
+  writeWorkflows,
 } from "@signoff/vault-core";
 import { handleCheck } from "../src/tools/check.js";
 
@@ -20,6 +22,10 @@ beforeEach(async () => {
   vaultPath = path.join(tmpDir, "project", ".signoff");
   process.env.SIGNOFF_HOME = path.join(tmpDir, ".signoff");
   await VaultManager.create(vaultPath, "test-project", "test-org");
+  // Disable spec diagram requirement so pre-diagram-gating tests can approve specs normally.
+  const wf = await readWorkflows(vaultPath);
+  wf.spec = { ...wf.spec, require_diagram: false };
+  await writeWorkflows(vaultPath, wf);
 });
 
 afterEach(async () => {

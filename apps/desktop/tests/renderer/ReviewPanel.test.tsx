@@ -304,3 +304,41 @@ describe('Vault access section', () => {
     expect(screen.queryByText(/project claude\.md detected/i)).not.toBeInTheDocument()
   })
 })
+
+describe('missingDiagram prop', () => {
+  const diagramRecord: ApprovalRecord = {
+    document: 'docs/x-plan.md', feature: 'x', type: 'plan', workflow: 'plan', status: 'in_review',
+    reviewers: { 'me@o.c': { status: 'in_review', at: 't' } },
+    history: [{ action: 'submitted', by: 'a@o.c', at: 't', message: null }],
+  }
+
+  it('shows a diagram-required notice and disables Approve when missingDiagram is true', async () => {
+    render(
+      <ReviewPanel
+        vaultPath="/v" feature="x" type="plan"
+        record={diagramRecord} derivedStatus="in_review"
+        workflow={{ required_approvers: ['me@o.c'], min_approvals: 1 }}
+        missingDiagram
+        onActionComplete={vi.fn()}
+      />
+    )
+    await waitFor(() => screen.getByText(/diagram required/i))
+    expect(screen.getByText(/diagram required/i)).toBeInTheDocument()
+    await waitFor(() => screen.getByRole('button', { name: /^approve$/i }))
+    expect(screen.getByRole('button', { name: /^approve$/i })).toBeDisabled()
+  })
+
+  it('does not disable Request changes when missingDiagram is true', async () => {
+    render(
+      <ReviewPanel
+        vaultPath="/v" feature="x" type="plan"
+        record={diagramRecord} derivedStatus="in_review"
+        workflow={{ required_approvers: ['me@o.c'], min_approvals: 1 }}
+        missingDiagram
+        onActionComplete={vi.fn()}
+      />
+    )
+    await waitFor(() => screen.getByRole('button', { name: /request changes/i }))
+    expect(screen.getByRole('button', { name: /request changes/i })).not.toBeDisabled()
+  })
+})

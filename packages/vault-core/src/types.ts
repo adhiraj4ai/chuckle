@@ -48,6 +48,7 @@ export interface WorkflowConfig {
   optional_approvers?: string[];
   min_approvals: number;
   approval_mode?: ApprovalMode;   // absent ⇒ "unanimous"
+  require_diagram?: boolean;      // absent ⇒ false
 }
 
 export interface VaultWorkflows {
@@ -84,4 +85,5 @@ export interface CheckApprovalResult {
   approved_by?: string;
   approved_at?: string;
   stale?: boolean;
+  missing_diagram?: boolean;     // require_diagram is on and the doc has no diagram
 }

@@ -56,6 +56,7 @@ import {
   type GitErrorKind,
   type SyncState,
   type Category,
+  type CheckApprovalResult,
 } from '@signoff/vault-core'
 import type { FeatureEntry, GitCommit, GitStatus, ReviewResult, VaultOpenResult } from '../shared/ipc-types.js'
 
@@ -417,6 +418,14 @@ export async function getDocumentApproval(
   type: DocumentType
 ): Promise<ApprovalRecord | null> {
   return readApproval(vaultPath, feature, type)
+}
+
+export async function getDocumentStatus(
+  vaultPath: string,
+  feature: string,
+  type: DocumentType
+): Promise<CheckApprovalResult> {
+  return getApprovalStatus(vaultPath, feature, type)
 }
 
 /** Write the real project file. Content lives in the project repo, not the vault repo.

@@ -57,6 +57,7 @@ interface Props {
   /** Derived document status from the sidebar/vault index (authoritative for header pill). */
   derivedStatus: ApprovalStatus | 'not_found'
   workflow: WorkflowConfig | undefined
+  missingDiagram?: boolean
   onActionComplete: (result?: ReviewResult) => void
 }
 
@@ -67,6 +68,7 @@ export function ReviewPanel({
   record,
   derivedStatus,
   workflow,
+  missingDiagram,
   onActionComplete,
 }: Props): React.ReactElement {
   const submittedBy = record?.history.find((e) => e.action === 'submitted')?.by
@@ -276,6 +278,11 @@ export function ReviewPanel({
       {record !== undefined && record !== null && isMember && (
         <div className="px-5 py-4 border-b border-border space-y-2">
           {actionError && <p className="text-stop text-[12px]">{actionError}</p>}
+          {missingDiagram && (
+            <p className="text-[12px] text-wait bg-wait-soft border border-wait/20 rounded-lg px-3 py-2">
+              ⚠ Diagram required — add a mermaid block or an image before this can be approved.
+            </p>
+          )}
           {meStatus === 'pending' && (
             <button
               onClick={() => act('start_review')}
@@ -291,7 +298,7 @@ export function ReviewPanel({
                 <>
                   <button
                     onClick={() => { setPendingAction('approve'); setNote(''); setActionError(null) }}
-                    disabled={busy}
+                    disabled={busy || missingDiagram}
                     className="w-full px-4 py-2 rounded-lg bg-ok text-white text-[13px] font-semibold hover:brightness-95 active:brightness-90 disabled:opacity-50 transition"
                   >
                     Approve
@@ -318,7 +325,7 @@ export function ReviewPanel({
                   />
                   <button
                     onClick={submitWithNote}
-                    disabled={busy}
+                    disabled={busy || (pendingAction === 'approve' && missingDiagram)}
                     className={pendingAction === 'approve'
                       ? 'w-full px-4 py-2 rounded-lg bg-ok text-white text-[13px] font-semibold hover:brightness-95 active:brightness-90 disabled:opacity-50 transition'
                       : 'w-full px-4 py-2 rounded-lg border border-border text-fg/80 text-[13px] font-medium hover:bg-app disabled:opacity-50 transition'}

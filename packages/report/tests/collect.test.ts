@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { VaultManager, readApproval, writeApproval, applyReviewerAction, hashContent } from "@signoff/vault-core";
+import { VaultManager, readApproval, writeApproval, applyReviewerAction, hashContent, readWorkflows, writeWorkflows } from "@signoff/vault-core";
 import { collectReport } from "../src/collect.js";
 
 let project: string, vaultPath: string;
@@ -11,6 +11,10 @@ beforeEach(async () => {
   vaultPath = path.join(project, ".signoff");
   await VaultManager.create(vaultPath, "proj");
   await fs.mkdir(path.join(project, "docs"), { recursive: true });
+  // Disable spec diagram requirement so pre-diagram-gating tests can approve specs normally.
+  const wf = await readWorkflows(vaultPath);
+  wf.spec = { ...wf.spec, require_diagram: false };
+  await writeWorkflows(vaultPath, wf);
 });
 afterEach(async () => { await fs.rm(project, { recursive: true, force: true }); });
 

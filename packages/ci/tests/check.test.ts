@@ -11,6 +11,8 @@ import {
   readManifest,
   writeManifest,
   setFeatureTier,
+  readWorkflows,
+  writeWorkflows,
 } from "@signoff/vault-core";
 import { runCheck } from "../src/check.js";
 
@@ -25,6 +27,10 @@ afterEach(async () => {
 async function approveArtifact(type: "spec" | "plan"): Promise<void> {
   const vaultPath = path.join(project, ".signoff");
   await VaultManager.create(vaultPath, "proj");
+  // Disable spec diagram requirement so pre-diagram-gating tests can approve specs normally.
+  const wf = await readWorkflows(vaultPath);
+  wf.spec = { ...wf.spec, require_diagram: false };
+  await writeWorkflows(vaultPath, wf);
   await fs.mkdir(path.join(project, "docs"), { recursive: true });
   await fs.writeFile(path.join(project, "docs", `x-${type}.md`), `# ${type}`);
   const v = await VaultManager.open(vaultPath);
