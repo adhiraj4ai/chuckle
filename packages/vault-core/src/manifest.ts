@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import type { DocumentType } from "./types.js";
 import type { Category, CategoryColor } from "./categories.js";
 import type { Tier } from "./tiers.js";
+import { normalizeTicket, type Ticket } from "./ticket.js";
 import { CATEGORY_COLORS, slugify, normalizeTags } from "./categories.js";
 import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 
@@ -14,6 +15,7 @@ export interface FeatureDocs {
   category?: string;   // Category.id; absent ⇒ Uncategorized
   tags?: string[];     // normalized free-form labels
   tier?: string;       // Tier level; absent ⇒ "standard"
+  ticket?: Ticket;
 }
 
 export interface Manifest {
@@ -179,5 +181,14 @@ export function setFeatureTier(m: Manifest, feature: string, tier: Tier | null):
   const next: FeatureDocs = { ...current };
   if (tier) next.tier = tier;
   else delete next.tier;
+  return { ...m, features: { ...m.features, [feature]: next } };
+}
+
+export function setFeatureTicket(m: Manifest, feature: string, ticket: Ticket | null): Manifest {
+  const current = m.features[feature] ?? {};
+  const next: FeatureDocs = { ...current };
+  const normalized = ticket ? normalizeTicket(ticket) : null;
+  if (normalized) next.ticket = normalized;
+  else delete next.ticket;
   return { ...m, features: { ...m.features, [feature]: next } };
 }

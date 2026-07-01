@@ -33,6 +33,8 @@ const api: SignoffAPI = {
       ipcRenderer.invoke('feature:set-tags', { vaultPath, feature, tags }),
     setTier: (vaultPath, feature, tier) =>
       ipcRenderer.invoke('feature:set-tier', { vaultPath, feature, tier }),
+    setTicket: (vaultPath, feature, ticket) =>
+      ipcRenderer.invoke('feature:set-ticket', { vaultPath, feature, ticket }),
   },
   categories: {
     list: (vaultPath) => ipcRenderer.invoke('categories:list', { vaultPath }),

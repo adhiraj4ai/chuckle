@@ -44,6 +44,7 @@ const mockSignoff: SignoffAPI = {
     setCategory: vi.fn(),
     setTags: vi.fn(),
     setTier: vi.fn(),
+    setTicket: vi.fn(),
   },
   categories: {
     list: vi.fn().mockResolvedValue([]),

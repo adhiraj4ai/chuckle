@@ -12,6 +12,9 @@ interface Props {
 export function FeatureMetaBar({ vaultPath, feature, onChanged }: Props): React.ReactElement {
   const [categories, setCategories] = useState<Category[]>([])
   const [draft, setDraft] = useState('')
+  const [editingTicket, setEditingTicket] = useState(false)
+  const [tId, setTId] = useState('')
+  const [tUrl, setTUrl] = useState('')
 
   useEffect(() => {
     void window.signoff.categories.list(vaultPath).then(setCategories)
@@ -29,6 +32,11 @@ export function FeatureMetaBar({ vaultPath, feature, onChanged }: Props): React.
 
   async function pickTier(next: Tier): Promise<void> {
     await window.signoff.features.setTier(vaultPath, feature.name, next)
+    onChanged()
+  }
+
+  async function commitTicket(ticket: { id: string; url?: string } | null): Promise<void> {
+    await window.signoff.features.setTicket(vaultPath, feature.name, ticket)
     onChanged()
   }
 
@@ -71,6 +79,53 @@ export function FeatureMetaBar({ vaultPath, feature, onChanged }: Props): React.
           </label>
         ))}
       </div>
+
+      {/* Ticket chip / editor */}
+      {feature.ticket ? (
+        <span className="flex items-center gap-1 text-[11px] rounded bg-fg/[0.06] px-1.5 py-0.5">
+          <button
+            onClick={() => feature.ticket?.url ? window.signoff.openExternal(feature.ticket.url) : undefined}
+            className="text-fg/80 hover:text-fg"
+          >
+            {feature.ticket.id}{feature.ticket.url ? ' ↗' : ''}
+          </button>
+          <button
+            aria-label="Clear ticket"
+            onClick={() => void commitTicket(null)}
+            className="text-fg/40 hover:text-stop"
+          >
+            ×
+          </button>
+        </span>
+      ) : editingTicket ? (
+        <span className="flex items-center gap-1">
+          <input
+            aria-label="Ticket id"
+            value={tId}
+            onChange={(e) => setTId(e.target.value)}
+            className="w-20 rounded-md bg-fg/[0.05] text-fg px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-iris/40"
+          />
+          <input
+            aria-label="Ticket url"
+            value={tUrl}
+            onChange={(e) => setTUrl(e.target.value)}
+            className="w-32 rounded-md bg-fg/[0.05] text-fg px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-iris/40"
+          />
+          <button
+            onClick={() => { void commitTicket({ id: tId, url: tUrl || undefined }); setEditingTicket(false) }}
+            className="text-[11px] px-1.5 py-0.5 rounded bg-fg/[0.08] text-fg/80 hover:text-fg"
+          >
+            Save ticket
+          </button>
+        </span>
+      ) : (
+        <button
+          onClick={() => setEditingTicket(true)}
+          className="text-[11px] text-fg/45 hover:text-fg/70"
+        >
+          Add ticket
+        </button>
+      )}
 
       <div className="flex items-center gap-1 flex-wrap">
         {feature.tags.map((t) => (

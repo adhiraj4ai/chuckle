@@ -4,13 +4,14 @@ import userEvent from '@testing-library/user-event'
 import { FeatureMetaBar } from '@renderer/components/FeatureMetaBar'
 import type { FeatureEntry } from '@shared/ipc-types'
 
-const feature: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' }
+const feature: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null }
 
 beforeEach(() => {
   window.signoff.categories.list = vi.fn().mockResolvedValue([{ id: 'backend', name: 'Backend', color: 'blue' }])
   window.signoff.features.setCategory = vi.fn().mockResolvedValue({ pushed: true })
   window.signoff.features.setTags = vi.fn().mockResolvedValue({ pushed: true })
   window.signoff.features.setTier = vi.fn().mockResolvedValue({ pushed: true })
+  window.signoff.features.setTicket = vi.fn().mockResolvedValue({ pushed: true })
 })
 
 describe('FeatureMetaBar', () => {
@@ -48,5 +49,23 @@ describe('FeatureMetaBar', () => {
     fireEvent.click(heavy)
     await waitFor(() => expect(window.signoff.features.setTier).toHaveBeenCalledWith('/v', 'user-auth', 'heavy'))
     await waitFor(() => expect(onChanged).toHaveBeenCalled())
+  })
+
+  it("renders a clickable ticket chip that opens the url", () => {
+    const feature = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: { id: 'PROJ-7', url: 'https://t/7' } } as FeatureEntry
+    render(<FeatureMetaBar vaultPath="/v" feature={feature} onChanged={() => {}} />)
+    const chip = screen.getByRole('button', { name: /PROJ-7/ })
+    fireEvent.click(chip)
+    expect(window.signoff.openExternal).toHaveBeenCalledWith('https://t/7')
+  })
+
+  it("saves a ticket via the editor", async () => {
+    const feature = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null } as FeatureEntry
+    render(<FeatureMetaBar vaultPath="/v" feature={feature} onChanged={() => {}} />)
+    fireEvent.click(screen.getByRole('button', { name: /add ticket/i }))
+    fireEvent.change(screen.getByLabelText(/ticket id/i), { target: { value: 'PROJ-8' } })
+    fireEvent.change(screen.getByLabelText(/ticket url/i), { target: { value: 'https://t/8' } })
+    fireEvent.click(screen.getByRole('button', { name: /save ticket/i }))
+    await waitFor(() => expect(window.signoff.features.setTicket).toHaveBeenCalledWith('/v', 'user-auth', { id: 'PROJ-8', url: 'https://t/8' }))
   })
 })

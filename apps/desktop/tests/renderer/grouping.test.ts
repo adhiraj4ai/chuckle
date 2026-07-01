@@ -11,6 +11,7 @@ const f = (name: string, category: FeatureEntry['category'], tags: string[]): Fe
   category,
   tags,
   tier: 'standard',
+  ticket: null,
 })
 
 describe('groupByCategory', () => {

@@ -20,7 +20,7 @@ export async function handleSubmit(
   if (typeof args !== "object" || args === null) {
     throw new Error("args must be a plain object");
   }
-  const { feature_name, document_type, document_path, category, tags, tier } = args as Record<string, unknown>;
+  const { feature_name, document_type, document_path, category, tags, tier, ticket_id, ticket_url } = args as Record<string, unknown>;
   if (typeof feature_name !== "string" || feature_name.length === 0) {
     throw new Error("feature_name must be a non-empty string");
   }
@@ -37,9 +37,12 @@ export async function handleSubmit(
 
   const { name, email } = await resolveGitAuthor(vaultPath);
   const vault = await VaultManager.open(vaultPath);
-  const opts: { category?: string; tags?: string[]; tier?: Tier } = {};
+  const opts: { category?: string; tags?: string[]; tier?: Tier; ticket?: { id: string; url?: string } } = {};
   if (typeof category === "string" && category.length) opts.category = category;
   if (Array.isArray(tags)) opts.tags = tags.filter((t): t is string => typeof t === "string");
   if (tier === "light" || tier === "standard" || tier === "heavy") opts.tier = tier as Tier;
+  if (typeof ticket_id === "string" && ticket_id.trim().length) {
+    opts.ticket = { id: ticket_id, url: typeof ticket_url === "string" ? ticket_url : undefined };
+  }
   return vault.submitForReview(feature_name, document_type as DocumentType, document_path, email, name, opts);
 }

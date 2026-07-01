@@ -52,6 +52,13 @@ returning a non-approved status with `missing_diagram: true`, the document has n
 diagram yet — add one and re-publish. A missing diagram never blocks *authoring*;
 it only holds back approval.
 
+## Tickets
+
+If the work traces to an external tracker item (Jira, GitHub, Linear), pass it
+when you publish: `publish_document(path, feature, "spec", ticket_id="PROJ-123",
+ticket_url="https://…")`. The link is optional and never blocks approval; the
+reviewer can add or change it in the SignOff app. Only http(s) URLs are kept.
+
 ## Rules
 
 - **If the hook blocks an edit, publish the relevant document and hand off.**

@@ -24,8 +24,10 @@ import {
   setFeatureCategory,
   setFeatureTags,
   setFeatureTier,
+  setFeatureTicket,
 } from "./manifest.js";
 import type { Tier } from "./tiers.js";
+import type { Ticket } from "./ticket.js";
 
 const DEFAULT_WORKFLOWS = {
   spec: {
@@ -123,7 +125,7 @@ export class VaultManager {
     srcRelPath: string,
     authorEmail: string,
     authorName: string,
-    opts?: { category?: string; tags?: string[]; tier?: Tier }
+    opts?: { category?: string; tags?: string[]; tier?: Tier; ticket?: Ticket }
   ): Promise<PublishResult> {
     let manifest = setFeatureDoc(await readManifest(this._vaultPath), featureName, type, srcRelPath);
     // Author suggestions: category only when unset (reviewer wins); tags union in.
@@ -137,6 +139,9 @@ export class VaultManager {
     }
     if (opts?.tier && !manifest.features[featureName]?.tier) {
       manifest = setFeatureTier(manifest, featureName, opts.tier);
+    }
+    if (opts?.ticket && !manifest.features[featureName]?.ticket) {
+      manifest = setFeatureTicket(manifest, featureName, opts.ticket);
     }
     await writeManifest(this._vaultPath, manifest);
     const sha = await this.recordSubmission(featureName, type, srcRelPath, authorEmail, authorName);
@@ -155,7 +160,7 @@ export class VaultManager {
     type: DocumentType,
     authorEmail: string,
     authorName: string,
-    opts?: { category?: string; tags?: string[]; tier?: Tier }
+    opts?: { category?: string; tags?: string[]; tier?: Tier; ticket?: Ticket }
   ): Promise<PublishResult> {
     return this.submitForReview(featureName, type, srcRelPath, authorEmail, authorName, opts);
   }

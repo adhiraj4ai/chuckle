@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { App } from '@renderer/App'
 import type { FeatureEntry } from '@shared/ipc-types'
 
-const userAuth: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' }
-const auditLog: FeatureEntry = { name: 'audit-log', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' }
+const userAuth: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null }
+const auditLog: FeatureEntry = { name: 'audit-log', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null }
 
 beforeEach(() => {
   vi.clearAllMocks()
