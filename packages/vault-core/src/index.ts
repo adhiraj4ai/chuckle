@@ -57,6 +57,7 @@ export {
   setFeatureCategory,
   setFeatureTags,
   setFeatureTier,
+  setFeatureTicket,
   ensureCategory,
 } from "./manifest.js";
 

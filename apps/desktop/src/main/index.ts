@@ -41,6 +41,7 @@ import {
   setFeatureCategoryBridge,
   setFeatureTagsBridge,
   setFeatureTierBridge,
+  setFeatureTicketBridge,
 } from './vault-bridge.js'
 import {
   isAllowedExternalUrl,
@@ -130,6 +131,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('feature:set-category', (_e, { vaultPath, feature, categoryId }) => setFeatureCategoryBridge(vaultPath, feature, categoryId))
   ipcMain.handle('feature:set-tags', (_e, { vaultPath, feature, tags }) => setFeatureTagsBridge(vaultPath, feature, tags))
   ipcMain.handle('feature:set-tier', (_e, { vaultPath, feature, tier }) => setFeatureTierBridge(vaultPath, feature, tier))
+  ipcMain.handle('feature:set-ticket', (_e, { vaultPath, feature, ticket }) => setFeatureTicketBridge(vaultPath, feature, ticket))
   ipcMain.handle('document:read', (_e, { vaultPath, feature, type }) => readDocument(vaultPath, feature, type))
   ipcMain.handle('document:write', (_e, { vaultPath, feature, type, content }) =>
     writeDocument(vaultPath, feature, type, content)

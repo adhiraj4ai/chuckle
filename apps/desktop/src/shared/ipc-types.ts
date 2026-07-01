@@ -17,6 +17,7 @@ import type {
   Category,
   CategoryColor,
   Tier,
+  Ticket,
   CheckApprovalResult,
 } from '@signoff/vault-core'
 
@@ -39,6 +40,7 @@ export type {
   Category,
   CategoryColor,
   Tier,
+  Ticket,
   CheckApprovalResult,
 }
 
@@ -59,6 +61,7 @@ export interface FeatureEntry {
   category: Category | null
   tags: string[]
   tier: Tier
+  ticket: Ticket | null
 }
 
 /** Result of creating/opening a vault: the vault's display name and the
@@ -102,7 +105,7 @@ export type IpcChannels =
   | 'vault:connect-remote' | 'vault:clone' | 'vault:sync-state' | 'vault:connect-claude'
   | 'features:list'
   | 'categories:list' | 'categories:upsert' | 'categories:remove'
-  | 'feature:set-category' | 'feature:set-tags' | 'feature:set-tier'
+  | 'feature:set-category' | 'feature:set-tags' | 'feature:set-tier' | 'feature:set-ticket'
   | 'document:read' | 'document:write' | 'document:get-approval' | 'document:is-stale' | 'document:get-status'
   | 'review:action'
   | 'comments:read' | 'comments:add-thread' | 'comments:add-reply' | 'comments:set-resolved'
@@ -136,6 +139,7 @@ export interface SignoffAPI {
     setCategory(vaultPath: string, feature: string, categoryId: string | null): Promise<ReviewResult>
     setTags(vaultPath: string, feature: string, tags: string[]): Promise<ReviewResult>
     setTier(vaultPath: string, feature: string, tier: Tier): Promise<ReviewResult>
+    setTicket(vaultPath: string, feature: string, ticket: Ticket | null): Promise<ReviewResult>
   }
   categories: {
     list(vaultPath: string): Promise<Category[]>

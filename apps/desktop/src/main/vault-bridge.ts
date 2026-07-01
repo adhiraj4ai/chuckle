@@ -27,6 +27,7 @@ import {
   setFeatureCategory,
   setFeatureTags,
   setFeatureTier,
+  setFeatureTicket,
   normalizeTier,
   type Tier,
   resolveDocPath,
@@ -57,6 +58,7 @@ import {
   type SyncState,
   type Category,
   type CheckApprovalResult,
+  type Ticket,
 } from '@signoff/vault-core'
 import type { FeatureEntry, GitCommit, GitStatus, ReviewResult, VaultOpenResult } from '../shared/ipc-types.js'
 
@@ -350,6 +352,7 @@ export async function listFeatures(vaultPath: string): Promise<FeatureEntry[]> {
       category: (docs?.category && byId.get(docs.category)) || null,
       tags: docs?.tags ?? [],
       tier: normalizeTier(docs?.tier),
+      ticket: docs?.ticket ?? null,
     })
   }
   return results
@@ -403,6 +406,13 @@ export async function setFeatureTierBridge(
   return transact(vaultPath, async () => {
     await writeManifest(vaultPath, setFeatureTier(await readManifest(vaultPath), feature, tier))
     return { files: [manifestRelPath], message: `chore: set tier of ${feature} = ${tier}` }
+  })
+}
+
+export async function setFeatureTicketBridge(vaultPath: string, feature: string, ticket: Ticket | null): Promise<ReviewResult> {
+  return transact(vaultPath, async () => {
+    await writeManifest(vaultPath, setFeatureTicket(await readManifest(vaultPath), feature, ticket))
+    return { files: [manifestRelPath], message: ticket ? `chore: set ticket for ${feature}` : `chore: clear ticket for ${feature}` }
   })
 }
 
