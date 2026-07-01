@@ -10,6 +10,7 @@ import { writeJsonAtomic, parseJsonOrThrow } from "./fsutil.js";
 export interface FeatureDocs {
   spec?: string;
   plan?: string;
+  adr?: string;
   category?: string;   // Category.id; absent ⇒ Uncategorized
   tags?: string[];     // normalized free-form labels
   tier?: string;       // Tier level; absent ⇒ "standard"

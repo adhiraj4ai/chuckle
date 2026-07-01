@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { FeatureMetaBar } from '@renderer/components/FeatureMetaBar'
 import type { FeatureEntry } from '@shared/ipc-types'
 
-const feature: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', category: null, tags: [], tier: 'standard' }
+const feature: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' }
 
 beforeEach(() => {
   window.signoff.categories.list = vi.fn().mockResolvedValue([{ id: 'backend', name: 'Backend', color: 'blue' }])

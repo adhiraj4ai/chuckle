@@ -5,7 +5,7 @@ import { humanizeFeature } from '../lib/feature'
 import { CategorySwatch } from './CategorySwatch'
 import { groupByCategory, matchesTagFilter, allTags } from '../lib/grouping'
 
-type DocType = 'spec' | 'plan'
+type DocType = 'spec' | 'plan' | 'adr'
 type Status = ApprovalStatus | 'not_found'
 type GroupBy = 'feature' | 'status' | 'category'
 type StatusFilter = ApprovalStatus | 'all'
@@ -67,7 +67,7 @@ const FILTERS: { key: StatusFilter; label: string }[] = [
   { key: 'approved', label: 'Approved' },
 ]
 
-const DOC_TYPES: DocType[] = ['spec', 'plan']
+const DOC_TYPES: DocType[] = ['spec', 'plan', 'adr']
 
 /** The statuses of a feature's existing documents (drops not_found). */
 function featureStatuses(f: FeatureEntry): ApprovalStatus[] {

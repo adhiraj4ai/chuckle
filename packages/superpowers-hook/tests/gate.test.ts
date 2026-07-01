@@ -23,7 +23,7 @@ let vaultPath: string;
  * Registers a doc in the manifest (writeManifest + setFeatureDoc) and creates
  * a pending approval record for it, without going through git / VaultManager.publish.
  */
-async function registerDoc(feature: string, type: "spec" | "plan", rel: string): Promise<void> {
+async function registerDoc(feature: string, type: "spec" | "plan" | "adr", rel: string): Promise<void> {
   const m = setFeatureDoc(await readManifest(vaultPath), feature, type, rel);
   await writeManifest(vaultPath, m);
   const record: ApprovalRecord = {
@@ -267,5 +267,36 @@ describe("evaluateGate", () => {
     const decision = await evaluateGate(writeEvent("src/README.md"));
     expect(decision.allow).toBe(false);
     expect(decision.reason).toMatch(/no active feature|submit a spec/i);
+  });
+
+  // --- ADR: non-gating document type ---------------------------------------
+
+  it("allows authoring an ADR doc (adr is non-gating)", async () => {
+    const decision = await evaluateGate({
+      cwd: projectRoot, tool_name: "Write",
+      tool_input: { file_path: path.join(projectRoot, "docs/adr/x-adr.md") },
+    });
+    expect(decision.allow).toBe(true);
+  });
+
+  it("does not block code on a pending ADR", async () => {
+    // feature "x": plan approved, adr registered+pending, active feature = x
+    await registerDoc("x", "plan", "docs/plans/2026-07-01-x-plan.md");
+    await approve("x", "plan");
+    await registerDoc("x", "adr", "docs/adr/x-adr.md");
+    await writeActiveFeature(projectRoot, { feature: "x", vaultPath });
+    const decision = await evaluateGate({
+      cwd: projectRoot, tool_name: "Write",
+      tool_input: { file_path: path.join(projectRoot, "src/app.ts") },
+    });
+    expect(decision.allow).toBe(true);
+  });
+
+  it("allows writing a registered ADR that lives outside any doc root (featureFor path)", async () => {
+    // adrs/ is NOT a doc root, so the under-doc-root authoring pass cannot apply;
+    // this is allowed only because the doc is a registered ADR (featureFor("adr")).
+    await registerDoc("y", "adr", "adrs/y-adr.md");
+    const decision = await evaluateGate(writeEvent("adrs/y-adr.md"));
+    expect(decision.allow).toBe(true);
   });
 });

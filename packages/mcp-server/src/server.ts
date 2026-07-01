@@ -29,8 +29,8 @@ export function createServer(vaultPath: string): Server {
             },
             document_type: {
               type: "string",
-              enum: ["spec", "plan"],
-              description: "Document type — spec or plan",
+              enum: ["spec", "plan", "adr"],
+              description: "Document type — spec, plan, or adr (architecture decision record)",
             },
             document_path: {
               type: "string",
@@ -67,8 +67,8 @@ export function createServer(vaultPath: string): Server {
             },
             document_type: {
               type: "string",
-              enum: ["spec", "plan"],
-              description: "Document type — spec or plan",
+              enum: ["spec", "plan", "adr"],
+              description: "Document type — spec, plan, or adr (architecture decision record)",
             },
             document_path: {
               type: "string",

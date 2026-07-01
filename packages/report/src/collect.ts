@@ -54,8 +54,10 @@ export async function collectReport(vaultPath: string): Promise<Report> {
   let approvedSpec = 0, approvedPlan = 0, stale = 0;
 
   for (const name of names) {
-    const status: Record<DocumentType, DocStatus> = { spec: "not_found", plan: "not_found" };
-    const staleFlag: Record<DocumentType, boolean> = { spec: false, plan: false };
+    // adr keys satisfy Record<DocumentType,…>; TYPES (spec/plan only) drives the
+    // loop, so adr is never collected or surfaced — ADR stays out of report coverage.
+    const status: Record<DocumentType, DocStatus> = { spec: "not_found", plan: "not_found", adr: "not_found" };
+    const staleFlag: Record<DocumentType, boolean> = { spec: false, plan: false, adr: false };
     for (const type of TYPES) {
       try {
         status[type] = (await getApprovalStatus(vaultPath, name, type)).status;

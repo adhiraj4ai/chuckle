@@ -16,6 +16,9 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
   const [planApprovers, setPlanApprovers] = useState('')
   const [planMin, setPlanMin] = useState(1)
   const [planMode, setPlanMode] = useState<Mode>('unanimous')
+  const [adrApprovers, setAdrApprovers] = useState('')
+  const [adrMin, setAdrMin] = useState(1)
+  const [adrMode, setAdrMode] = useState<Mode>('unanimous')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,6 +38,9 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
         setPlanApprovers(w.plan.required_approvers.join(', '))
         setPlanMin(clampMin(w.plan.min_approvals))
         setPlanMode(w.plan.approval_mode === 'threshold' ? 'threshold' : 'unanimous')
+        setAdrApprovers(w.adr.required_approvers.join(', '))
+        setAdrMin(clampMin(w.adr.min_approvals))
+        setAdrMode(w.adr.approval_mode === 'threshold' ? 'threshold' : 'unanimous')
       })
       .catch((e) => {
         // Escape the "Loading…" state: fall back to defaults + show an error.
@@ -42,9 +48,11 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
         setWorkflows({
           spec: { required_approvers: [], min_approvals: 1 },
           plan: { required_approvers: [], min_approvals: 1 },
+          adr: { required_approvers: [], min_approvals: 1 },
         })
         setSpecMode('unanimous')
         setPlanMode('unanimous')
+        setAdrMode('unanimous')
         setError(`Couldn't load reviewer settings: ${e instanceof Error ? e.message : String(e)}`)
       })
     return () => { alive = false }
@@ -59,6 +67,7 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
     const next: VaultWorkflows = {
       spec: { ...workflows.spec, required_approvers: parseEmails(specApprovers), min_approvals: clampMin(specMin), approval_mode: specMode },
       plan: { ...workflows.plan, required_approvers: parseEmails(planApprovers), min_approvals: clampMin(planMin), approval_mode: planMode },
+      adr: { ...workflows.adr, required_approvers: parseEmails(adrApprovers), min_approvals: clampMin(adrMin), approval_mode: adrMode },
     }
     try {
       await window.signoff.workflows.write(vaultPath, next)
@@ -151,6 +160,46 @@ export function ReviewerSettings({ vaultPath, onClose }: Props): React.ReactElem
                 aria-label="Minimum approvals"
                 value={planMin}
                 onChange={(e) => setPlanMin(clampMin(e.target.value))}
+                className="w-20 rounded-lg border border-border bg-app px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30"
+              />
+            </label>
+          )}
+        </fieldset>
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h3 className="text-[11px] font-semibold text-fg/45 tracking-wider">ADR</h3>
+        <label className="flex flex-col gap-1">
+          <span className="text-[12px] text-fg/60">ADR approvers</span>
+          <input
+            type="text"
+            aria-label="ADR approvers"
+            value={adrApprovers}
+            onChange={(e) => setAdrApprovers(e.target.value)}
+            placeholder="email1@org.com, email2@org.com"
+            className="rounded-lg border border-border bg-app px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30 focus:border-iris/50 placeholder:text-fg/30"
+          />
+          <span className="text-[11px] text-fg/40">Comma-separated emails. Empty = anyone can approve.</span>
+        </label>
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-[12px] text-fg/60">Approval rule</legend>
+          <label className="flex items-center gap-2 text-[13px] text-fg/80">
+            <input type="radio" name="adr-mode" checked={adrMode === 'unanimous'} onChange={() => setAdrMode('unanimous')} />
+            All listed approvers
+          </label>
+          <label className="flex items-center gap-2 text-[13px] text-fg/80">
+            <input type="radio" name="adr-mode" checked={adrMode === 'threshold'} onChange={() => setAdrMode('threshold')} />
+            At least N
+          </label>
+          {adrMode === 'threshold' && (
+            <label className="flex flex-col gap-1 mt-1">
+              <span className="text-[12px] text-fg/60">Minimum approvals</span>
+              <input
+                type="number"
+                min={1}
+                aria-label="Minimum approvals"
+                value={adrMin}
+                onChange={(e) => setAdrMin(clampMin(e.target.value))}
                 className="w-20 rounded-lg border border-border bg-app px-3 py-1.5 text-[13px] focus:outline-none focus:ring-2 focus:ring-iris/30"
               />
             </label>

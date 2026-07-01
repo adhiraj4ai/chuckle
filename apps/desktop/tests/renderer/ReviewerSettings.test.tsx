@@ -7,7 +7,8 @@ beforeEach(() => {
   vi.mocked(window.signoff.workflows.read).mockResolvedValue({
     spec: { required_approvers: ['lead@org.com'], min_approvals: 1 },
     plan: { required_approvers: [], min_approvals: 1 },
-  })
+    adr: { required_approvers: [], min_approvals: 1 },
+  } as never)
   vi.mocked(window.signoff.workflows.write).mockResolvedValue(undefined)
 })
 
@@ -52,6 +53,7 @@ it('defaults to "All listed approvers" and hides the min input until threshold i
   vi.mocked(window.signoff.workflows.read).mockResolvedValue({
     spec: { required_approvers: ['a@o.c', 'b@o.c'], min_approvals: 1 },
     plan: { required_approvers: [], min_approvals: 1 },
+    adr: { required_approvers: [], min_approvals: 1 },
   } as never)
   render(<ReviewerSettings vaultPath="/v" onClose={() => {}} />)
   const specSection = (await screen.findByRole('heading', { name: 'Spec' })).closest('section') as HTMLElement
@@ -64,6 +66,7 @@ it('reveals the min input in threshold mode and persists approval_mode on save',
   vi.mocked(window.signoff.workflows.read).mockResolvedValue({
     spec: { required_approvers: ['a@o.c', 'b@o.c', 'c@o.c'], min_approvals: 1 },
     plan: { required_approvers: [], min_approvals: 1 },
+    adr: { required_approvers: [], min_approvals: 1 },
   } as never)
   vi.mocked(window.signoff.workflows.write).mockResolvedValue(undefined as never)
   render(<ReviewerSettings vaultPath="/v" onClose={() => {}} />)
@@ -76,4 +79,20 @@ it('reveals the min input in threshold mode and persists approval_mode on save',
   const written = vi.mocked(window.signoff.workflows.write).mock.calls[0][1] as never as { spec: { approval_mode: string; min_approvals: number } }
   expect(written.spec.approval_mode).toBe('threshold')
   expect(written.spec.min_approvals).toBe(2)
+})
+
+it('saves the adr workflow section', async () => {
+  vi.mocked(window.signoff.workflows.read).mockResolvedValue({
+    spec: { required_approvers: [], min_approvals: 1 },
+    plan: { required_approvers: [], min_approvals: 1 },
+    adr: { required_approvers: [], min_approvals: 1 },
+  } as never)
+  vi.mocked(window.signoff.workflows.write).mockResolvedValue(undefined as never)
+  render(<ReviewerSettings vaultPath="/v" onClose={() => {}} />)
+  const adrSection = (await screen.findByRole('heading', { name: 'ADR' })).closest('section') as HTMLElement
+  fireEvent.change(within(adrSection).getByLabelText('ADR approvers'), { target: { value: 'arch@o.c' } })
+  fireEvent.click(screen.getByRole('button', { name: /save/i }))
+  await waitFor(() => expect(window.signoff.workflows.write).toHaveBeenCalled())
+  const written = vi.mocked(window.signoff.workflows.write).mock.calls[0][1] as never as { adr: { required_approvers: string[] } }
+  expect(written.adr.required_approvers).toEqual(['arch@o.c'])
 })

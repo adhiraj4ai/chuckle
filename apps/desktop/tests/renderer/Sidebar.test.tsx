@@ -4,8 +4,8 @@ import { Sidebar } from '@renderer/components/Sidebar'
 import type { FeatureEntry } from '@shared/ipc-types'
 
 const features: FeatureEntry[] = [
-  { name: 'user-auth', spec: 'pending', plan: 'approved', category: null, tags: [], tier: 'standard' },
-  { name: 'payment-gw', spec: 'rejected', plan: 'not_found', category: null, tags: [], tier: 'standard' },
+  { name: 'user-auth', spec: 'pending', plan: 'approved', adr: 'not_found', category: null, tags: [], tier: 'standard' },
+  { name: 'payment-gw', spec: 'rejected', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' },
 ]
 
 describe('Sidebar', () => {
@@ -21,7 +21,7 @@ describe('Sidebar', () => {
   })
 
   it('uppercases known acronyms when humanizing', () => {
-    render(<Sidebar vaultName="vault" features={[{ name: 'mcp-server', spec: 'pending', plan: 'not_found', category: null, tags: [], tier: 'standard' }]} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    render(<Sidebar vaultName="vault" features={[{ name: 'mcp-server', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' }]} selected={null} onSelect={() => {}} onSync={() => {}} />)
     expect(screen.getByText('MCP Server')).toBeInTheDocument()
   })
 
@@ -49,8 +49,8 @@ describe('Sidebar', () => {
 
   it('surfaces in_review docs via the In review filter chip and tints them', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'in_review', plan: 'not_found', category: null, tags: [], tier: 'standard' },
-      { name: 'payment-gw', spec: 'approved', plan: 'not_found', category: null, tags: [], tier: 'standard' },
+      { name: 'user-auth', spec: 'in_review', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' },
+      { name: 'payment-gw', spec: 'approved', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     // The In review chip exists with a count of 1
@@ -76,8 +76,8 @@ describe('Sidebar', () => {
 
   it('renders a category group and an Uncategorized group when arranging by category', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'pending', plan: 'not_found', category: { id: 'backend', name: 'Backend', color: 'blue' }, tags: [], tier: 'standard' },
-      { name: 'payment-gw', spec: 'pending', plan: 'not_found', category: null, tags: [], tier: 'standard' },
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: { id: 'backend', name: 'Backend', color: 'blue' }, tags: [], tier: 'standard' },
+      { name: 'payment-gw', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     fireEvent.click(screen.getByText('Category'))
@@ -87,8 +87,8 @@ describe('Sidebar', () => {
 
   it('filters by a tag chip (AND with other filters)', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'pending', plan: 'not_found', category: null, tags: ['security'], tier: 'standard' },
-      { name: 'payment-gw', spec: 'pending', plan: 'not_found', category: null, tags: [], tier: 'standard' },
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: ['security'], tier: 'standard' },
+      { name: 'payment-gw', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     fireEvent.click(screen.getByText(/#security/))
@@ -112,9 +112,9 @@ describe('Sidebar', () => {
 
   it('renders a tier badge for light/heavy features but not for standard', () => {
     const fs: FeatureEntry[] = [
-      { name: 'light-feature', spec: 'pending', plan: 'not_found', category: null, tags: [], tier: 'light' },
-      { name: 'heavy-feature', spec: 'pending', plan: 'not_found', category: null, tags: [], tier: 'heavy' },
-      { name: 'standard-feature', spec: 'pending', plan: 'not_found', category: null, tags: [], tier: 'standard' },
+      { name: 'light-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'light' },
+      { name: 'heavy-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'heavy' },
+      { name: 'standard-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard' },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     const lightRow = screen.getByLabelText('light-feature')
@@ -123,6 +123,14 @@ describe('Sidebar', () => {
     expect(within(lightRow).getByTitle('light tier')).toBeInTheDocument()
     expect(within(heavyRow).getByTitle('heavy tier')).toBeInTheDocument()
     expect(within(standardRow).queryByTitle('standard tier')).not.toBeInTheDocument()
+  })
+
+  it('shows an A pill for a feature with an ADR', () => {
+    const fs: FeatureEntry[] = [
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'approved', category: null, tags: [], tier: 'standard' },
+    ]
+    render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    expect(screen.getByTitle('adr — Approved')).toBeInTheDocument()
   })
 
   it('marks features reported as new with a "New" indicator and leaves others unmarked', () => {

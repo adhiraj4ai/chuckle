@@ -53,6 +53,7 @@ export interface FeatureEntry {
   name: string
   spec: ApprovalStatus | 'not_found'
   plan: ApprovalStatus | 'not_found'
+  adr: ApprovalStatus | 'not_found'
   category: Category | null
   tags: string[]
   tier: Tier

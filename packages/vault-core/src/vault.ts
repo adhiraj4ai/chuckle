@@ -38,6 +38,11 @@ const DEFAULT_WORKFLOWS = {
     min_approvals: 1,
     approval_mode: "unanimous" as const,
   },
+  adr: {
+    required_approvers: [] as string[],
+    min_approvals: 1,
+    approval_mode: "unanimous" as const,
+  },
 };
 
 function signoffHome(): string {

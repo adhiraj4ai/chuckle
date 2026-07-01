@@ -16,6 +16,10 @@ function targetPath(event: PreToolUseEvent): string | null {
 }
 function classifyDoc(rel: string): DocumentType {
   const p = rel.toLowerCase();
+  const base = path.basename(p);
+  if (/(^|\/)adrs?(\/|$)/.test(p) || /(^|-)adrs?\.md$/.test(base) || base.includes("decision-record")) {
+    return "adr";
+  }
   if (/(^|\/)plans?(\/|$)/.test(p) || /plan/.test(path.basename(p))) return "plan";
   return "spec";
 }
@@ -53,6 +57,11 @@ export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision
     // MARKDOWN file under a doc root. Non-.md files (e.g. docs/app.ts) do NOT get
     // this free pass — they fall through to the code-gating path below.
     if (featureFor("spec") || (underDocRoot && isMarkdown(rel) && classifyDoc(rel) === "spec")) return { allow: true };
+
+    // ADR is a non-gating record: authoring/editing it is always allowed.
+    if (featureFor("adr") || (underDocRoot && isMarkdown(rel) && classifyDoc(rel) === "adr")) {
+      return { allow: true };
+    }
 
     // Registered plan doc → gate on that feature's spec approval.
     const planFeature = featureFor("plan");

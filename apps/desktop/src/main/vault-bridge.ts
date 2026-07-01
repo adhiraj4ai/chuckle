@@ -197,10 +197,12 @@ async function resolveVaultDir(selected: string): Promise<string> {
   return selected
 }
 
-/** Classify a markdown file as spec or plan from its path/filename. */
+/** Classify a markdown file as spec, plan, or adr from its path/filename. */
 function classifyDoc(relPath: string): DocumentType {
   const p = relPath.toLowerCase()
-  if (/(^|\/)plans?(\/|$)/.test(p) || /plan/.test(path.basename(p))) return 'plan'
+  const base = path.basename(p)
+  if (/(^|\/)adrs?(\/|$)/.test(p) || /(^|-)adrs?\.md$/.test(base) || base.includes('decision-record')) return 'adr'
+  if (/(^|\/)plans?(\/|$)/.test(p) || /plan/.test(base)) return 'plan'
   return 'spec'
 }
 
@@ -333,15 +335,17 @@ export async function listFeatures(vaultPath: string): Promise<FeatureEntry[]> {
   const entries = await listFeatureNames(vaultPath)
   const results: FeatureEntry[] = []
   for (const name of entries) {
-    const [specStatus, planStatus] = await Promise.all([
+    const [specStatus, planStatus, adrStatus] = await Promise.all([
       getApprovalStatus(vaultPath, name, 'spec'),
       getApprovalStatus(vaultPath, name, 'plan'),
+      getApprovalStatus(vaultPath, name, 'adr'),
     ])
     const docs = manifest.features[name]
     results.push({
       name,
       spec: specStatus.status,
       plan: planStatus.status,
+      adr: adrStatus.status,
       category: (docs?.category && byId.get(docs.category)) || null,
       tags: docs?.tags ?? [],
       tier: normalizeTier(docs?.tier),

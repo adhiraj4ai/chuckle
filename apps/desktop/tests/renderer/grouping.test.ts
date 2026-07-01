@@ -7,8 +7,10 @@ const f = (name: string, category: FeatureEntry['category'], tags: string[]): Fe
   name,
   spec: 'pending',
   plan: 'not_found',
+  adr: 'not_found',
   category,
   tags,
+  tier: 'standard',
 })
 
 describe('groupByCategory', () => {

@@ -14,7 +14,13 @@ export async function readWorkflows(vaultPath: string): Promise<VaultWorkflows> 
     }
     throw err;
   }
-  return parseJsonOrThrow<VaultWorkflows>(raw, filePath);
+  const wf = parseJsonOrThrow<VaultWorkflows>(raw, filePath);
+  // Backfill an adr workflow for vaults written before ADR existed (read-time,
+  // non-destructive; the next write persists it).
+  if (!wf.adr) {
+    wf.adr = { required_approvers: [], min_approvals: 1, approval_mode: "unanimous" };
+  }
+  return wf;
 }
 
 export function getWorkflowForType(

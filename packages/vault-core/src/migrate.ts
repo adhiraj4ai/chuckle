@@ -72,6 +72,10 @@ export async function migrateVault(vaultPath: string): Promise<void> {
 function classifyDoc(relPath: string): DocumentType {
   const p = relPath.toLowerCase();
   const base = path.basename(p);
+  // An ADR: /adr(s)/ path segment, "<name>-adr.md"/"adr.md", or "decision-record".
+  if (/(^|\/)adrs?(\/|$)/.test(p) || /(^|-)adrs?\.md$/.test(base) || base.includes("decision-record")) {
+    return "adr";
+  }
   // A "plan" is identified by a /plan(s)/ path segment, or a basename whose
   // name ends in "-plan" (e.g. "user-auth-plan.md") or is exactly "plan.md".
   // Anchored so substrings like "capacity-planning-design.md" are NOT plans.

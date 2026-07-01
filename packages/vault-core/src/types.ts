@@ -1,4 +1,4 @@
-export type DocumentType = "spec" | "plan";
+export type DocumentType = "spec" | "plan" | "adr";
 
 export type ApprovalAction =
   | "submitted"
@@ -53,6 +53,7 @@ export interface WorkflowConfig {
 export interface VaultWorkflows {
   spec: WorkflowConfig;
   plan: WorkflowConfig;
+  adr: WorkflowConfig;
 }
 
 export interface VaultConfig {

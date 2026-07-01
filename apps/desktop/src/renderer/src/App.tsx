@@ -13,7 +13,7 @@ import { useAutoSync } from './hooks/useAutoSync'
 import { useSeenFeatures } from './hooks/useSeenFeatures'
 import type { ApprovalRecord, ApprovalStatus, DocumentType, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
 
-const DOC_TYPES: DocumentType[] = ['spec', 'plan']
+const DOC_TYPES: DocumentType[] = ['spec', 'plan', 'adr']
 
 type ActionDone = (result?: ReviewResult) => void
 

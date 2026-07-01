@@ -26,6 +26,22 @@ work through the gate cleanly — never to route around it.
    - If `approved`: implement. The hook now allows edits.
    - If not approved: report the status and **stop**.
 
+## Decision records (ADR)
+
+When you make a non-obvious design decision during spec/plan work — a choice
+with real alternatives (a library, a data model, a tradeoff) — record it:
+
+1. Write or append the feature's ADR at `docs/adr/<feature>-adr.md` (one ADR
+   doc per feature; add each decision as a dated `## <decision>` section).
+2. Call `publish_document(document_path, feature_name, "adr")`.
+3. On a later decision, edit the same ADR doc and re-publish — re-publishing
+   re-opens approval so reviewers see it changed.
+
+The ADR records *why*; it complements (does not replace) the spec/plan. An ADR
+is **non-blocking** — a pending or absent ADR never blocks code, so write and
+publish it in parallel with the normal spec → plan → implement flow. Do not
+wait on ADR approval to proceed.
+
 ## Rules
 
 - **If the hook blocks an edit, publish the relevant document and hand off.**

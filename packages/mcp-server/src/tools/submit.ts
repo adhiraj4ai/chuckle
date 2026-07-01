@@ -24,9 +24,9 @@ export async function handleSubmit(
   if (typeof feature_name !== "string" || feature_name.length === 0) {
     throw new Error("feature_name must be a non-empty string");
   }
-  if (document_type !== "spec" && document_type !== "plan") {
+  if (document_type !== "spec" && document_type !== "plan" && document_type !== "adr") {
     throw new Error(
-      `document_type must be "spec" or "plan", got: ${String(document_type)}`
+      `document_type must be "spec", "plan", or "adr", got: ${String(document_type)}`
     );
   }
   validateFeatureName(feature_name);
