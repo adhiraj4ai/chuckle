@@ -53,6 +53,19 @@ export { CATEGORY_COLORS, slugify, normalizeTags } from '@signoff/vault-core/cat
 // to avoid pulling in the Node-only vault-core barrel into the renderer bundle).
 export const TIER_KEYS: Tier[] = ['light', 'standard', 'heavy']
 
+export interface InstallStatus {
+  gate: 'not_installed' | 'installed' | 'outdated'
+  skill: 'not_installed' | 'installed'
+  installedVersion: string | null
+  appVersion: string | null
+  nodeAvailable: boolean
+}
+
+export interface InstallComponents {
+  gate: boolean
+  skill: boolean
+}
+
 export interface FeatureEntry {
   name: string
   spec: ApprovalStatus | 'not_found'
@@ -113,6 +126,7 @@ export type IpcChannels =
   | 'workflows:read' | 'workflows:write'
   | 'app:open-external'
   | 'vault:setup-progress'
+  | 'install:status' | 'install:apply' | 'install:remove'
 
 export interface SignoffAPI {
   vault: {
@@ -168,6 +182,11 @@ export interface SignoffAPI {
   workflows: {
     read(vaultPath: string): Promise<VaultWorkflows>
     write(vaultPath: string, workflows: VaultWorkflows): Promise<void>
+  }
+  install: {
+    status(vaultPath: string): Promise<InstallStatus>
+    apply(vaultPath: string, components: InstallComponents): Promise<InstallStatus>
+    remove(vaultPath: string, components: InstallComponents): Promise<InstallStatus>
   }
   /** Open an http(s) URL in the OS browser. Non-http(s) URLs are refused. */
   openExternal(url: string): Promise<{ ok: boolean; error?: string }>

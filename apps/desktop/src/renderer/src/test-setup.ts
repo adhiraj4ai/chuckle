@@ -74,6 +74,11 @@ const mockSignoff: SignoffAPI = {
     read: vi.fn(),
     write: vi.fn(),
   },
+  install: {
+    status: vi.fn(),
+    apply: vi.fn(),
+    remove: vi.fn(),
+  },
   openExternal: vi.fn(),
 }
 
