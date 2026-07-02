@@ -429,7 +429,12 @@ export function Sidebar({
         )}
         <div className="px-3.5 py-4 flex items-center justify-center gap-2.5 border-t border-railfg/[0.06]">
           <Logo size={32} className="shrink-0" />
-          <span className="font-semibold text-[15px] tracking-tight text-railfg/90">SignOff</span>
+          <span
+            className="text-railfg/90 leading-none pr-0.5"
+            style={{ fontFamily: "'SignPainter', 'SignPainter-HouseScript', 'Brush Script MT', cursive", fontWeight: 700, fontSize: '26px' }}
+          >
+            SignOff
+          </span>
         </div>
       </footer>
     </aside>
