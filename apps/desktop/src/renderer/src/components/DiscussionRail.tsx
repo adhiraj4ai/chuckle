@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import type { DocumentType, CommentsFile, CommentThread } from '@shared/ipc-types'
+import type { DocumentType, CommentsFile, CommentThread, CommentEntry } from '@shared/ipc-types'
 import { extractHeadings, type Heading } from '../lib/headings.js'
 
 interface Props {
@@ -9,15 +9,68 @@ interface Props {
   markdown: string
 }
 
-interface ThreadGroupProps {
-  heading: Heading | null
-  threads: CommentThread[]
-  vaultPath: string
-  feature: string
-  type: DocumentType
-  onRefresh: (file: CommentsFile) => void
+// --- Identity color helper (deterministic from author string) -------------
+const IDENTITY_HEX = ['#5b57d6', '#1f9d6b', '#c77b16', '#3b82c4', '#8a8f99', '#d1495b'] as const
+
+function identityColor(who: string): string {
+  let hash = 0
+  for (let i = 0; i < who.length; i++) {
+    hash = (hash * 31 + who.charCodeAt(i)) | 0
+  }
+  return IDENTITY_HEX[Math.abs(hash) % IDENTITY_HEX.length]
 }
 
+function initials(who: string): string {
+  const name = (who.split('@')[0] ?? who).replace(/[._-]+/g, ' ').trim()
+  const parts = name.split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+}
+
+function relativeTime(at: string): string {
+  const then = new Date(at).getTime()
+  if (Number.isNaN(then)) return at
+  const diff = Date.now() - then
+  const sec = Math.round(diff / 1000)
+  if (sec < 45) return 'just now'
+  const min = Math.round(sec / 60)
+  if (min < 60) return `${min}m ago`
+  const hr = Math.round(min / 60)
+  if (hr < 24) return `${hr}h ago`
+  const day = Math.round(hr / 24)
+  if (day < 7) return `${day}d ago`
+  return new Date(at).toLocaleDateString()
+}
+
+// --- A single comment (or reply) as a timeline node -----------------------
+function CommentNode({ comment, isReply }: { comment: CommentEntry; isReply: boolean }): React.ReactElement {
+  const color = identityColor(comment.by)
+  return (
+    <div className={`relative flex gap-2.5 ${isReply ? 'pl-6' : ''}`}>
+      {isReply && (
+        // short connector tick from the parent thread's spine to this reply
+        <span aria-hidden className="absolute left-2 top-3 w-3.5 h-px bg-border" />
+      )}
+      <div
+        className="mt-0.5 w-7 h-7 shrink-0 rounded-lg grid place-items-center text-white text-[11px] font-mono font-bold shadow-sm"
+        style={{ backgroundColor: color }}
+        aria-hidden
+      >
+        {initials(comment.by)}
+      </div>
+      <div className="min-w-0 flex-1 pb-1">
+        <div className="flex items-baseline gap-1.5">
+          <span className="font-medium text-fg/85 truncate text-[12px]">{comment.by}</span>
+          <span className="text-fg/40 shrink-0 text-[11px]">{relativeTime(comment.at)}</span>
+        </div>
+        <p className="text-fg/75 leading-relaxed whitespace-pre-wrap text-[12.5px] mt-0.5">{comment.body}</p>
+      </div>
+    </div>
+  )
+}
+
+// --- One thread rendered as a connected timeline --------------------------
 function ThreadItem({
   thread,
   vaultPath,
@@ -63,51 +116,61 @@ function ThreadItem({
   }
 
   return (
-    <div className={`rounded-lg border border-border bg-app p-3 text-[12px] ${thread.resolved ? 'opacity-60' : ''}`}>
-      {thread.comments.map((c) => (
-        <div key={c.id} className="mb-2 last:mb-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="font-medium text-fg/80 truncate">{c.by}</span>
-            <span className="text-fg/35 shrink-0">{new Date(c.at).toLocaleDateString()}</span>
-          </div>
-          <p className="text-fg/75 leading-relaxed whitespace-pre-wrap">{c.body}</p>
-        </div>
-      ))}
-      <div className="mt-2 flex items-center gap-2 pt-2 border-t border-border">
+    <div className="relative pl-3">
+      {/* vertical connector spine down the left of the thread */}
+      <span aria-hidden className="absolute left-0 top-1 bottom-1 w-px bg-border" />
+      <div className="flex flex-col gap-2.5">
+        {thread.comments.map((c, i) => (
+          <CommentNode key={c.id} comment={c} isReply={i > 0} />
+        ))}
+      </div>
+
+      <div className="mt-1.5 flex items-center gap-3 pl-9">
         <button
           onClick={() => setReplyOpen((v) => !v)}
-          className="text-fg/50 hover:text-fg transition text-[11px]"
+          className="text-fg/50 hover:text-iris-ink transition text-[11px] rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
         >
           Reply
         </button>
         <button
           onClick={handleResolve}
-          className={`text-[11px] transition ${thread.resolved ? 'text-ok hover:text-fg/50' : 'text-fg/50 hover:text-ok'}`}
+          className={`text-[11px] transition rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
+            thread.resolved ? 'text-ok hover:text-fg/50' : 'text-fg/50 hover:text-ok'
+          }`}
         >
           {thread.resolved ? 'Resolved' : 'Resolve'}
         </button>
       </div>
-      {error && <p className="mt-1.5 text-[11px] text-stop" role="alert">{error}</p>}
+
+      {error && (
+        <p className="mt-1.5 pl-9 text-[11px] text-stop" role="alert">
+          {error}
+        </p>
+      )}
+
       {replyOpen && (
-        <div className="mt-2 flex flex-col gap-1.5">
+        <div className="mt-2 pl-9 flex flex-col gap-1.5">
           <textarea
             value={replyBody}
             onChange={(e) => setReplyBody(e.target.value)}
             placeholder="Write a reply…"
             rows={2}
-            className="w-full rounded-md border border-border bg-surface text-fg text-[12px] px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-iris/50"
+            className="w-full rounded-md border border-border bg-surface text-fg text-[12px] px-2.5 py-1.5 resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
           />
           <div className="flex gap-1.5">
             <button
               onClick={handleReply}
               disabled={posting || !replyBody.trim()}
-              className="px-2.5 py-1 rounded-md bg-iris text-white text-[11px] font-medium disabled:opacity-50 hover:brightness-95 transition"
+              className="px-2.5 py-1 rounded-md bg-iris text-white text-[11px] font-medium disabled:opacity-50 hover:brightness-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
             >
               {posting ? 'Posting…' : 'Post reply'}
             </button>
             <button
-              onClick={() => { setReplyOpen(false); setReplyBody('') }}
-              className="px-2.5 py-1 rounded-md border border-border text-fg/60 text-[11px] hover:bg-surface transition"
+              onClick={() => {
+                setReplyOpen(false)
+                setReplyBody('')
+              }}
+              className="px-2.5 py-1 rounded-md border border-border text-fg/60 text-[11px] hover:bg-surface transition focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
             >
               Cancel
             </button>
@@ -118,107 +181,115 @@ function ThreadItem({
   )
 }
 
+// --- A heading group: anchored label + its threads ------------------------
 function ThreadGroup({
   heading,
   threads,
+  isActiveAnchor,
+  onAnchor,
   vaultPath,
   feature,
   type,
   onRefresh,
-}: ThreadGroupProps): React.ReactElement {
-  const [composerOpen, setComposerOpen] = useState(false)
-  const [body, setBody] = useState('')
-  const [posting, setPosting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
+}: {
+  heading: Heading | null
+  threads: CommentThread[]
+  isActiveAnchor: boolean
+  onAnchor: () => void
+  vaultPath: string
+  feature: string
+  type: DocumentType
+  onRefresh: (file: CommentsFile) => void
+}): React.ReactElement {
   const sectionLabel = heading ? heading.text : 'General'
-  const slug = heading ? heading.slug : ''
-  const line = heading ? heading.line : 0
-
-  async function handlePost(): Promise<void> {
-    if (!body.trim()) return
-    setPosting(true)
-    setError(null)
-    try {
-      const result = await window.signoff.comments.addThread(vaultPath, feature, type, slug, line, body.trim())
-      onRefresh(result)
-      setBody('')
-      setComposerOpen(false)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setPosting(false)
-    }
-  }
+  const count = threads.reduce((n, t) => n + t.comments.length, 0)
+  const allResolved = threads.length > 0 && threads.every((t) => t.resolved)
+  const [expanded, setExpanded] = useState(false)
 
   return (
-    <div className="mb-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[12px] font-semibold text-fg/70">{sectionLabel}</h3>
-        {heading && (
-          <button
-            onClick={() => setComposerOpen((v) => !v)}
-            aria-label={`Comment on ${sectionLabel}`}
-            className="text-[11px] text-iris hover:text-iris-ink transition px-2 py-0.5 rounded hover:bg-iris/10"
-          >
-            Comment
-          </button>
+    <section className="mb-5">
+      {/* Anchored heading label: iris rail + uppercase mono + right-aligned count */}
+      <button
+        type="button"
+        onClick={onAnchor}
+        aria-label={`Comment on ${sectionLabel}`}
+        aria-pressed={isActiveAnchor}
+        className={`group w-full flex items-center gap-2 mb-2 text-left rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
+          isActiveAnchor ? '' : ''
+        }`}
+      >
+        <span
+          aria-hidden
+          className={`w-0.5 self-stretch min-h-[1.1rem] rounded-full transition-colors ${
+            isActiveAnchor ? 'bg-iris' : 'bg-iris/30 group-hover:bg-iris/60'
+          }`}
+        />
+        <h3 className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.13em] text-fg/45 group-hover:text-fg/70 transition-colors truncate">
+          {sectionLabel}
+        </h3>
+        {count > 0 && (
+          <span className="ml-auto shrink-0 font-mono text-[10.5px] text-fg/40 tabular-nums">
+            {count}
+          </span>
         )}
-      </div>
+      </button>
 
-      {composerOpen && (
-        <div className="mb-2 flex flex-col gap-1.5 bg-surface rounded-lg border border-border p-2.5">
-          <textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={`Add a comment on ${sectionLabel}`}
-            rows={3}
-            className="w-full rounded-md border border-border bg-app text-fg text-[12px] px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-iris/50"
-          />
-          <div className="flex gap-1.5">
+      {/* Resolved thread groups collapse to a one-line green summary */}
+      {allResolved && !expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="w-full flex items-center gap-2 rounded-md bg-ok-soft text-ok px-2.5 py-1.5 text-[12px] transition hover:brightness-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden className="w-3.5 h-3.5 shrink-0 fill-current">
+            <path d="M6.2 11.3 2.9 8l1-1 2.3 2.3L11.1 4.6l1 1z" />
+          </svg>
+          <span className="truncate">
+            <span className="font-medium">{sectionLabel}</span> — resolved
+          </span>
+          <span className="ml-auto shrink-0 text-ok/80">
+            {count} {count === 1 ? 'comment' : 'comments'} · show
+          </span>
+        </button>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {allResolved && expanded && (
             <button
-              onClick={handlePost}
-              disabled={posting || !body.trim()}
-              className="px-2.5 py-1 rounded-md bg-iris text-white text-[11px] font-medium disabled:opacity-50 hover:brightness-95 transition"
+              type="button"
+              onClick={() => setExpanded(false)}
+              className="self-start text-[11px] text-ok hover:text-fg/50 transition rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
             >
-              {posting ? 'Posting…' : 'Post'}
+              Hide resolved
             </button>
-            <button
-              onClick={() => { setComposerOpen(false); setBody('') }}
-              className="px-2.5 py-1 rounded-md border border-border text-fg/60 text-[11px] hover:bg-app transition"
-            >
-              Cancel
-            </button>
-          </div>
-          {error && <p className="text-[11px] text-stop" role="alert">{error}</p>}
+          )}
+          {threads.map((t) => (
+            <ThreadItem
+              key={t.id}
+              thread={t}
+              vaultPath={vaultPath}
+              feature={feature}
+              type={type}
+              onRefresh={onRefresh}
+            />
+          ))}
         </div>
       )}
-
-      {threads.length === 0 && !composerOpen && heading && (
-        <p className="text-[11.5px] text-fg/35 pl-0.5">No comments yet.</p>
-      )}
-
-      <div className="flex flex-col gap-2">
-        {threads.map((t) => (
-          <ThreadItem
-            key={t.id}
-            thread={t}
-            vaultPath={vaultPath}
-            feature={feature}
-            type={type}
-            onRefresh={onRefresh}
-          />
-        ))}
-      </div>
-    </div>
+    </section>
   )
 }
 
 export function DiscussionRail({ vaultPath, feature, type, markdown }: Props): React.ReactElement {
   const [commentsFile, setCommentsFile] = useState<CommentsFile | null>(null)
+  const [anchorSlug, setAnchorSlug] = useState<string | null>(null)
+  const [body, setBody] = useState('')
+  const [posting, setPosting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setCommentsFile(null)
+    setAnchorSlug(null)
+    setBody('')
+    setError(null)
     window.signoff.comments
       .read(vaultPath, feature, type)
       .then(setCommentsFile)
@@ -227,13 +298,11 @@ export function DiscussionRail({ vaultPath, feature, type, markdown }: Props): R
 
   const headings = extractHeadings(markdown)
   const headingSlugs = new Set(headings.map((h) => h.slug))
-
   const threads = commentsFile?.threads ?? []
 
   // Group threads by section slug
   const bySection = new Map<string, CommentThread[]>()
   const generalThreads: CommentThread[] = []
-
   for (const t of threads) {
     if (headingSlugs.has(t.section)) {
       const arr = bySection.get(t.section) ?? []
@@ -248,39 +317,120 @@ export function DiscussionRail({ vaultPath, feature, type, markdown }: Props): R
     setCommentsFile(file)
   }
 
+  // Default the composer's anchor to the first heading once headings are known.
+  const effectiveAnchor = anchorSlug ?? headings[0]?.slug ?? null
+  const anchorHeading = headings.find((h) => h.slug === effectiveAnchor) ?? null
+  const anchorLabel = anchorHeading ? anchorHeading.text : 'the document'
+
+  async function handlePost(): Promise<void> {
+    if (!body.trim() || !anchorHeading) return
+    setPosting(true)
+    setError(null)
+    try {
+      const result = await window.signoff.comments.addThread(
+        vaultPath,
+        feature,
+        type,
+        anchorHeading.slug,
+        anchorHeading.line,
+        body.trim(),
+      )
+      handleRefresh(result)
+      setBody('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setPosting(false)
+    }
+  }
+
   if (commentsFile === null) {
     return (
-      <div className="flex-1 grid place-items-center text-[12px] text-fg/40">
-        Loading discussions…
+      <div className="flex flex-col h-full min-h-0 overflow-hidden">
+        <div className="flex-1 grid place-items-center text-[12px] text-fg/40">Loading discussion…</div>
       </div>
     )
   }
 
+  const hasAnyThreads = threads.length > 0
+  const hasHeadings = headings.length > 0
+
   return (
-    <div className="flex flex-col h-full overflow-y-auto px-4 py-4">
-      <h2 className="text-[11px] font-semibold text-fg/45 mb-4">Discussion</h2>
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
+      {/* Scrollable thread area */}
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+        {!hasHeadings ? (
+          <p className="text-[12px] text-fg/45 leading-relaxed">
+            This document has no headings yet, so there is nowhere to anchor a comment. Add a heading to
+            start the conversation.
+          </p>
+        ) : !hasAnyThreads ? (
+          <p className="text-[12.5px] text-fg/50 leading-relaxed">
+            No comments yet. Pick a section below and leave the first note.
+          </p>
+        ) : null}
 
-      {headings.map((h) => (
-        <ThreadGroup
-          key={h.slug}
-          heading={h}
-          threads={bySection.get(h.slug) ?? []}
-          vaultPath={vaultPath}
-          feature={feature}
-          type={type}
-          onRefresh={handleRefresh}
-        />
-      ))}
+        {headings.map((h) => (
+          <ThreadGroup
+            key={h.slug}
+            heading={h}
+            threads={bySection.get(h.slug) ?? []}
+            isActiveAnchor={effectiveAnchor === h.slug}
+            onAnchor={() => setAnchorSlug(h.slug)}
+            vaultPath={vaultPath}
+            feature={feature}
+            type={type}
+            onRefresh={handleRefresh}
+          />
+        ))}
 
-      {generalThreads.length > 0 && (
-        <ThreadGroup
-          heading={null}
-          threads={generalThreads}
-          vaultPath={vaultPath}
-          feature={feature}
-          type={type}
-          onRefresh={handleRefresh}
-        />
+        {generalThreads.length > 0 && (
+          <ThreadGroup
+            heading={null}
+            threads={generalThreads}
+            isActiveAnchor={false}
+            onAnchor={() => {}}
+            vaultPath={vaultPath}
+            feature={feature}
+            type={type}
+            onRefresh={handleRefresh}
+          />
+        )}
+      </div>
+
+      {/* Composer pinned at the bottom */}
+      {hasHeadings && (
+        <div className="shrink-0 border-t border-border bg-rail px-4 py-3">
+          <div className="rounded-xl border border-border bg-surface focus-within:ring-2 focus-within:ring-iris/40 transition-shadow shadow-sm overflow-hidden">
+            <textarea
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder={`Add a comment on ${anchorLabel}`}
+              rows={2}
+              className="w-full bg-transparent text-fg text-[12.5px] px-3 py-2.5 resize-none focus:outline-none placeholder:text-fg/40"
+            />
+            <div className="flex items-center gap-2 px-2.5 py-2 border-t border-border bg-app/60">
+              <span className="min-w-0 flex items-center gap-1.5 text-[11px] text-fg/45">
+                <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-iris shrink-0" />
+                <span className="truncate">
+                  Anchored to <span className="font-medium text-fg/60">{anchorLabel}</span>
+                </span>
+              </span>
+              <button
+                onClick={handlePost}
+                disabled={posting || !body.trim()}
+                className="ml-auto shrink-0 px-3 py-1 rounded-md bg-iris text-white text-[11.5px] font-medium disabled:opacity-50 hover:brightness-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
+              >
+                {posting ? 'Posting…' : 'Post'}
+              </button>
+            </div>
+          </div>
+          {error && (
+            <p className="mt-1.5 text-[11px] text-stop" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
       )}
     </div>
   )
