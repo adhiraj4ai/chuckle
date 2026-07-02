@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { VaultManager, readAuditEntries } from "@signoff/vault-core";
+import { VaultManager, readAuditEntries, appendAuditEntry } from "@signoff/vault-core";
 import { recordMcpCall } from "../src/tools/audit-record.js";
 
 let root: string, vaultPath: string;
@@ -30,9 +30,27 @@ describe("recordMcpCall", () => {
     });
   });
 
-  it("is fail-open on a bad vault path", async () => {
+  it("is fail-open: swallows a genuine append failure", async () => {
+    // Force a real ENOTDIR: put a FILE where the vault's parent dir should be, so
+    // appendAuditEntry's `mkdir -p <vault>/audit` genuinely throws (a merely-missing
+    // dir would be created by mkdir recursive and NOT exercise the catch).
+    const fileAsParent = path.join(root, "not-a-dir");
+    await fs.writeFile(fileAsParent, "x");
+    const badVault = path.join(fileAsParent, ".signoff");
+
+    // Precondition: the underlying append genuinely rejects for this path.
     await expect(
-      recordMcpCall(path.join(root, "nope", ".signoff"), "srv-1", "publish_document", {}),
+      appendAuditEntry(badVault, {
+        v: 1, session_id: "s", ts: "2026-07-03T10:00:00.000Z", actor: "a@b.com",
+        feature: "f", repo: "proj", source: "mcp", tool: "publish_document", decision: "allow",
+      }),
+    ).rejects.toThrow();
+
+    // recordMcpCall must swallow that throw — without its internal catch this would reject.
+    await expect(
+      recordMcpCall(badVault, "srv-1", "publish_document", { feature_name: "f" }),
     ).resolves.toBeUndefined();
+    // And no audit file was written under the bad vault.
+    expect(await readAuditEntries(badVault)).toEqual([]);
   });
 });
