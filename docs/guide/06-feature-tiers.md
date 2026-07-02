@@ -2,6 +2,8 @@
 
 Each feature carries a **tier** that controls which document must be approved before code can proceed, and whether unanimous approval is required.
 
+> In the desktop app this concept is labeled **Weight** (light / standard / heavy). "Tier" and "Weight" are the same thing — the app UI and index field call it weight; this guide and the CLI/config keep the name `tier`.
+
 ---
 
 ## The three tiers
@@ -41,9 +43,9 @@ publish_document(
 
 The `tier` argument is **no-clobber**: it is applied only if the feature has no tier set yet. If the feature already has a tier in `index.json`, the argument is silently ignored. This means the first publish call that includes a tier wins, and later republishes do not accidentally change it.
 
-### Via the SignOff desktop app (FeatureMetaBar)
+### Via the SignOff desktop app (inspector)
 
-Open the feature in the SignOff desktop app. The **FeatureMetaBar** at the top of the feature pane shows three radio buttons: **light**, **standard**, **heavy**. Select one to change the tier immediately. This change writes directly to `index.json` in the vault and is reflected on the next git pull.
+Open the feature in the SignOff desktop app. In the right-hand inspector, the **Details** block has a **Weight** control — a segmented control with **light**, **standard**, and **heavy**. Select one to change the tier immediately. This change writes directly to `index.json` in the vault and is reflected on the next git pull.
 
 ---
 

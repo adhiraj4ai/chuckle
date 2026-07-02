@@ -10,9 +10,9 @@ A category is a single, color-coded label chosen from a managed set. Each featur
 
 ### Managing the category list
 
-Open the SignOff desktop app, select a vault, and click the gear icon (⚙) next to the "Arrange by" controls in the sidebar. The **Manage categories** modal lists existing categories with their usage count, lets you delete unused ones, and lets you add new ones.
+Open the SignOff desktop app, select a vault, and click the **Categories** button at the bottom of the left sidebar (it also shows the number of categories defined). This opens the category manager, which lists existing categories with their usage count, lets you delete unused ones, and lets you add new ones.
 
-To add a category: pick a color swatch, type a name, then press Enter or click **Add**. The category id is derived automatically from the name. To remove one, click **Delete** next to it. Removing a category does not delete the features it was assigned to; those features become uncategorized.
+To add a category: pick a color swatch, type a name, then press Enter or click **Add**. The category id is derived automatically from the name. To remove one, click **Delete** next to it. Removing a category does not delete the features it was assigned to; those features become uncategorized, and the category dropdown updates immediately.
 
 ### Assigning a category
 
@@ -27,7 +27,7 @@ publish_document(
 )
 ```
 
-**From the desktop app:** open a feature. The **FeatureMetaBar** at the top of the detail pane shows a dropdown containing all vault categories plus an "Uncategorized" option. Selecting a value saves immediately. Unlike publishing, this always updates — it is not no-clobber.
+**From the desktop app:** open a feature. The inspector's **Details** block shows a **Category** dropdown containing all vault categories plus an "Uncategorized" option. Selecting a value saves immediately. Unlike publishing, this always updates — it is not no-clobber.
 
 ### Filtering and grouping by category
 
@@ -56,7 +56,7 @@ publish_document(
 
 Tags from `publish_document` **merge** with any tags already on the feature. Republishing with a different tag list adds the new tags; it does not remove existing ones.
 
-**From the desktop app:** the **FeatureMetaBar** shows existing tags as removable chips. To add a tag, type into the **Add tag…** field and press Enter. To remove one, click the × on its chip.
+**From the desktop app:** the inspector's **Details** block shows existing tags as removable chips. To add a tag, type into the **+ Add** field and press Enter. To remove one, click the × on its chip.
 
 ### Filtering by tag
 
@@ -86,15 +86,15 @@ publish_document(
 
 Like category, ticket is **no-clobber**: it is applied only if the feature has no ticket yet. Subsequent publishes with different `ticket_id`/`ticket_url` values are silently ignored if a ticket already exists.
 
-**From the desktop app:** open a feature. The **FeatureMetaBar** shows an **Add ticket** button if no ticket is set. Click it to open an inline editor with two fields: **Ticket id** and **Ticket url**. Fill in the id (required), optionally add a URL, then click **Save ticket**. The ticket appears as a chip showing the id.
+**From the desktop app:** open a feature. The inspector's **Details** block shows a **+ Add ticket** button if no ticket is set. Click it to open an inline editor with two fields, **ID** and **URL**. Fill in the id (required), optionally add a URL, then click **Save**. The ticket appears as a chip showing the id.
 
 > Note: The URL field accepts any text, but clicking the ticket chip to open the URL in your browser only works for `http://` and `https://` URLs. Non-http URLs are stored but the chip is not clickable.
 
-To remove a ticket from the desktop app, click the × on the ticket chip in the FeatureMetaBar.
+To remove a ticket from the desktop app, click the × on the ticket chip in the inspector's Details block.
 
 ### The ticket chip
 
-When a ticket is set, the FeatureMetaBar shows a chip. If a URL is stored, the chip reads `PROJ-123 ↗` and clicking it opens the URL in your default browser. If no URL is stored, the chip shows the id only with no link.
+When a ticket is set, the inspector's Details block shows a chip. If a URL is stored, the chip reads `PROJ-123 ↗` and clicking it opens the URL in your default browser. If no URL is stored, the chip shows the id only with no link.
 
 ---
 

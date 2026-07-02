@@ -59,6 +59,18 @@ See also: [Diagram gating](07-diagram-gating.md).
 
 ---
 
+## A newly published document doesn't appear in the app
+
+**Symptom.** Claude Code published a spec or plan, but the feature (or its new document tab) does not show up in the SignOff desktop app.
+
+**Cause.** The desktop app is showing a vault state from before the document was published, or its remote has not been pulled yet.
+
+**Fix.** Run **Sync** in the sidebar header (or wait for the next auto-sync — every 5 minutes by default). Sync detects documents newly added to the project's doc roots and registers them, so newly published specs and plans appear automatically. You no longer need to recreate the vault for new documents to show up. If the document was published on another machine, make sure that machine has pushed the vault and that this one has a working remote.
+
+See also: [Getting started — sync](02-getting-started.md).
+
+---
+
 ## Approved doc went back to needing approval
 
 **Symptom.** A document was previously approved, but the gate now blocks code again, or `check_approval` returns `stale: true`.
@@ -126,7 +138,7 @@ The slug recorded in the vault is whatever you pass as `feature_name`. Once set,
 
 For a `standard` or `heavy` feature, the plan must be approved to unblock code. The spec must be published before the plan can be submitted, but spec approval alone is not sufficient.
 
-To check the current tier for a feature, open it in the SignOff desktop app (FeatureMetaBar shows the tier radio buttons) or look at the `tier` field in `index.json`.
+To check the current tier for a feature, open it in the SignOff desktop app (the inspector's **Details** block shows the **Weight** control) or look at the `tier` field in `index.json`.
 
 See also: [Feature tiers](06-feature-tiers.md).
 

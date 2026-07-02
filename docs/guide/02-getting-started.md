@@ -40,6 +40,8 @@ git push -u origin main
 
 Your team members open the vault by pointing the desktop app at the same `.signoff` directory (or by cloning the vault remote first).
 
+Once a remote is set, the desktop app keeps the vault in sync for you: it **auto-syncs every 5 minutes** by default (pulling approvals from other reviewers and pushing your own), and each sync also registers any newly published specs and plans found in the project's doc roots. You can change the cadence — options include every 1/2/5/30 minutes, hourly, and longer, or off — in the status-bar **settings** (the gear at the bottom right). A manual **Sync** button in the sidebar header runs it on demand.
+
 ### Open an existing vault
 
 1. Open the SignOff desktop app.

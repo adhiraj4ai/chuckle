@@ -124,7 +124,7 @@ The gate (`signoff-gate`, the `@signoff/superpowers-hook` PreToolUse hook) inter
 
 **What you see when blocked:** Claude Code reports that the edit was blocked by the SignOff gate, and tells you which feature and document type need approval. The agent does not retry the edit.
 
-**The gate is fail-closed.** If the approval status is `pending`, `in_review`, `rejected`, or `not_found`, the gate blocks. A short sync delay between the reviewer's approval commit and your local vault can cause a brief `pending` window — run a Sync in the desktop app or pull the vault remote, then try again.
+**The gate is fail-closed.** If the approval status is `pending`, `in_review`, `rejected`, or `not_found`, the gate blocks. A short sync delay between the reviewer's approval commit and your local vault can cause a brief `pending` window — the desktop app auto-syncs on a schedule (every 5 minutes by default), but you can run a **Sync** in the app or pull the vault remote to pick up the approval immediately, then try again.
 
 **Never bypass the gate with raw file writes.** If the agent uses a Bash command to write a file that the hook would have blocked, the gate is defeated. This is the behavior the gate is specifically designed to prevent. The agent should always call `publish_document` and stop, not work around the block.
 
@@ -174,7 +174,7 @@ Tool call: publish_document
   ticket_url:     "https://tracker.example.com/PROJ-123"
 ```
 
-The ticket link appears in the FeatureMetaBar as a chip (`PROJ-123 ↗`) that opens the URL. The reviewer can add or change the ticket in the desktop app. Ticket information is never blocking.
+The ticket link appears in the inspector's Details block as a chip (`PROJ-123 ↗`) that opens the URL. The reviewer can add or change the ticket in the desktop app. Ticket information is never blocking.
 
 ## Listing pending documents
 

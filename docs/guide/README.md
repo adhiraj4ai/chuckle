@@ -16,7 +16,7 @@ chapters are lookup material.
 | 1 | [Introduction & concepts](01-introduction.md) | everyone | What SignOff is, the gate model, the vault, roles |
 | 2 | [Getting started](02-getting-started.md) | developer, admin | Install, initialize/open a vault, connect Claude Code, run the desktop app |
 | 3 | [The core workflow](03-core-workflow.md) | developer | The spec → plan → implement loop and how the gate behaves |
-| 4 | [Reviewing & approving](04-reviewing-and-approving.md) | reviewer | The desktop app: find features, review, approve / request changes, comments, staleness |
+| 4 | [Reviewing & approving](04-reviewing-and-approving.md) | reviewer | The desktop app: find features, the inspector and sign-off seal, approve / request changes, inline comments, staleness |
 | 5 | [Approval policy](05-approval-policy.md) | admin | Required approvers, unanimous vs threshold (M-of-N), `min_approvals` |
 | 6 | [Feature tiers](06-feature-tiers.md) | admin, developer | `light` / `standard` / `heavy` — scaling the gate to risk |
 | 7 | [Diagram gating](07-diagram-gating.md) | admin, developer | Require a diagram before approval; what counts, how to satisfy it |
