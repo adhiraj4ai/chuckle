@@ -14,6 +14,11 @@ export default {
         railfg: 'rgb(var(--railfg) / <alpha-value>)',
         fg: 'rgb(var(--fg) / <alpha-value>)',
         border: 'rgb(var(--border) / <alpha-value>)',
+        // Exact artifact neutrals (theme-aware): secondary/tertiary text + soft
+        // dividers. Use these instead of fg-opacity so grays match the mockup.
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        faint: 'rgb(var(--faint) / <alpha-value>)',
+        'border-soft': 'rgb(var(--border-soft) / <alpha-value>)',
         // Static palette (code blocks, brand, status — same in both themes)
         ink: { DEFAULT: '#16181d', soft: '#21242c', line: '#2c303a' },
         mist: '#f5f6f8',

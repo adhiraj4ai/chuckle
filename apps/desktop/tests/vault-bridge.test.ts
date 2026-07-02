@@ -159,6 +159,32 @@ describe('listFeatures', () => {
   })
 })
 
+describe('syncVault picks up newly added documents', () => {
+  it('registers a doc added to docs/ after vault creation', async () => {
+    const projectRoot = path.dirname(vaultPath)
+    const rel = 'docs/specs/audit-log.md'
+    await fs.mkdir(path.dirname(path.join(projectRoot, rel)), { recursive: true })
+    await fs.writeFile(path.join(projectRoot, rel), '# Audit Log\n')
+
+    // Not registered until a sync runs.
+    expect((await listFeatures(vaultPath)).find((f) => f.name === 'audit-log')).toBeUndefined()
+
+    // No upstream here, so the pull rejects; detection still runs in the finally.
+    await syncVault(vaultPath).catch(() => {})
+
+    const audit = (await listFeatures(vaultPath)).find((f) => f.name === 'audit-log')
+    expect(audit?.spec).toBe('pending')
+  })
+
+  it('leaves an already-registered document untouched', async () => {
+    await seedDoc('user-auth', 'spec')
+    const before = (await listFeatures(vaultPath)).find((f) => f.name === 'user-auth')
+    await syncVault(vaultPath).catch(() => {})
+    const after = (await listFeatures(vaultPath)).find((f) => f.name === 'user-auth')
+    expect(after?.spec).toBe(before?.spec)
+  })
+})
+
 describe('readDocument', () => {
   it('returns the project file content (not a vault copy)', async () => {
     await seedDoc('user-auth', 'spec', '# Auth Spec\n\nContent here.\n')

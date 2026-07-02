@@ -135,8 +135,8 @@ export function VaultSwitcher({ onVaultSelected }: Props): React.ReactElement {
   return (
     <div className="min-h-screen bg-app flex flex-col items-center justify-center p-8">
       <div className="w-full max-w-md">
-        <div className="flex items-center gap-3 mb-1">
-          <Logo size={38} />
+        <div className="flex items-center gap-3.5 mb-1">
+          <Logo size={56} />
           <h1
             className="text-[42px] leading-none text-fg pr-1"
             style={{ fontFamily: "'SignPainter', 'SignPainter-HouseScript', 'Brush Script MT', cursive", fontWeight: 700 }}

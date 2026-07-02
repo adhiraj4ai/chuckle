@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SelectedDocument } from '@renderer/App'
-import type { DocumentType } from '@shared/ipc-types'
+import type { DocumentType, FeatureEntry } from '@shared/ipc-types'
 
 /** A promise we resolve manually so we can control response ordering. */
 function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
@@ -11,6 +11,10 @@ function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
 }
 
 const docTypes: { type: DocumentType; status: 'pending' }[] = [{ type: 'spec', status: 'pending' }]
+
+const entry = (name: string): FeatureEntry => ({
+  name, spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null,
+})
 
 beforeEach(() => {
   vi.resetAllMocks()
@@ -38,16 +42,16 @@ describe('SelectedDocument stale-response race', () => {
 
     const { rerender } = render(
       <SelectedDocument
-        vaultPath="/v" feature="old" type="spec" docTypes={docTypes}
-        onSelectType={() => {}} onActionComplete={() => {}}
+        vaultPath="/v" featureEntry={entry('old')} type="spec" docTypes={docTypes} categories={[]} reloadKey={0}
+        onSelectType={() => {}} onActionComplete={() => {}} onChanged={() => {}}
       />
     )
 
     // Switch selection before the first read resolves.
     rerender(
       <SelectedDocument
-        vaultPath="/v" feature="new" type="spec" docTypes={docTypes}
-        onSelectType={() => {}} onActionComplete={() => {}}
+        vaultPath="/v" featureEntry={entry('new')} type="spec" docTypes={docTypes} categories={[]} reloadKey={0}
+        onSelectType={() => {}} onActionComplete={() => {}} onChanged={() => {}}
       />
     )
 
@@ -57,14 +61,15 @@ describe('SelectedDocument stale-response race', () => {
 
     // Open the Discussion panel: it renders the markdown owned by
     // SelectedDocument's read effect (the one with the stale-response guard).
-    // DiscussionRail derives section headings (rendered as <h3>) from it.
+    // The composer anchors to the document's first heading, so its placeholder
+    // reflects which markdown won.
     fireEvent.click(screen.getByRole('button', { name: /discussion/i }))
 
-    // The discussion section must reflect the NEWER selection; the stale older
-    // response must not overwrite it (SelectedDocument's `alive` guard).
+    // The discussion must reflect the NEWER selection; the stale older response
+    // must not overwrite it (SelectedDocument's `alive` guard).
     await waitFor(() =>
-      expect(screen.getByRole('heading', { level: 3, name: 'New Heading' })).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/add a comment on new heading/i)).toBeInTheDocument()
     )
-    expect(screen.queryByRole('heading', { level: 3, name: 'Old Heading' })).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/add a comment on old heading/i)).not.toBeInTheDocument()
   })
 })

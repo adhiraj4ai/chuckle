@@ -66,6 +66,7 @@ export function useAutoSync(
 export const AUTO_SYNC_OPTIONS: { label: string; ms: number }[] = [
   { label: 'Off', ms: 0 },
   { label: 'Every 1 min', ms: 60_000 },
+  { label: 'Every 2 min', ms: 120_000 },
   { label: 'Every 5 min', ms: 300_000 },
   { label: 'Every 30 min', ms: 1_800_000 },
   { label: 'Every 1 hour', ms: 3_600_000 },

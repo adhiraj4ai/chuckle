@@ -158,7 +158,7 @@ export interface SignoffAPI {
   }
   comments: {
     read(vaultPath: string, feature: string, type: DocumentType): Promise<CommentsFile>
-    addThread(vaultPath: string, feature: string, type: DocumentType, section: string, line: number, body: string): Promise<CommentsFile>
+    addThread(vaultPath: string, feature: string, type: DocumentType, section: string, line: number, body: string, quote?: string): Promise<CommentsFile>
     addReply(vaultPath: string, feature: string, type: DocumentType, threadId: string, body: string): Promise<CommentsFile>
     setResolved(vaultPath: string, feature: string, type: DocumentType, threadId: string, resolved: boolean): Promise<CommentsFile>
   }

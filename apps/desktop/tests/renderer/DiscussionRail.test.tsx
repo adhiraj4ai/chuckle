@@ -9,26 +9,40 @@ beforeEach(() => {
   vi.mocked(window.signoff.comments.read).mockResolvedValue({ version: 1, threads: [] })
   vi.mocked(window.signoff.comments.addThread).mockResolvedValue({ version: 1, threads: [{ id: 't1', section: 'goals', line: 3, resolved: false, comments: [{ id: 'c1', by: 'me@o.c', at: 't', body: 'q' }] }] })
 })
-it('lists sections and adds a comment thread', async () => {
-  render(<DiscussionRail vaultPath="/v" feature="f" type="spec" markdown={docMd} />)
-  await waitFor(() => screen.getByText('Goals'))
-  fireEvent.click(screen.getByRole('button', { name: /comment on goals/i }))
-  fireEvent.change(screen.getByPlaceholderText(/comment/i), { target: { value: 'q' } })
+it('adds a comment thread to the anchored section', async () => {
+  render(
+    <DiscussionRail
+      vaultPath="/v"
+      feature="f"
+      type="spec"
+      markdown={docMd}
+      openRequest={{ slug: 'goals', text: 'Goals', nonce: 1 }}
+    />,
+  )
+  const ta = await screen.findByPlaceholderText(/add a comment on goals/i)
+  fireEvent.change(ta, { target: { value: 'q' } })
   fireEvent.click(screen.getByRole('button', { name: /^post$/i }))
-  await waitFor(() => expect(window.signoff.comments.addThread).toHaveBeenCalledWith('/v', 'f', 'spec', 'goals', 3, 'q'))
+  await waitFor(() => expect(window.signoff.comments.addThread).toHaveBeenCalledWith('/v', 'f', 'spec', 'goals', 3, 'q', undefined))
 })
 
 describe('error handling — failures surface without throwing', () => {
   it('shows an error and does not throw when addThread rejects', async () => {
     vi.mocked(window.signoff.comments.addThread).mockRejectedValueOnce(new Error('forbidden: not a member'))
-    render(<DiscussionRail vaultPath="/v" feature="f" type="spec" markdown={docMd} />)
-    await waitFor(() => screen.getByText('Goals'))
-    fireEvent.click(screen.getByRole('button', { name: /comment on goals/i }))
-    fireEvent.change(screen.getByPlaceholderText(/comment/i), { target: { value: 'q' } })
+    render(
+      <DiscussionRail
+        vaultPath="/v"
+        feature="f"
+        type="spec"
+        markdown={docMd}
+        openRequest={{ slug: 'goals', text: 'Goals', nonce: 1 }}
+      />,
+    )
+    const ta = await screen.findByPlaceholderText(/add a comment on goals/i)
+    fireEvent.change(ta, { target: { value: 'q' } })
     fireEvent.click(screen.getByRole('button', { name: /^post$/i }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/forbidden: not a member/i))
     // Composer stays open with the text intact so the user can retry.
-    expect((screen.getByPlaceholderText(/comment/i) as HTMLTextAreaElement).value).toBe('q')
+    expect((screen.getByPlaceholderText(/add a comment on goals/i) as HTMLTextAreaElement).value).toBe('q')
   })
 
   it('shows an error and does not throw when addReply rejects', async () => {

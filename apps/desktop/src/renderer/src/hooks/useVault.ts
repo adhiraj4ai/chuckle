@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import type { FeatureEntry, DocumentType } from '@shared/ipc-types'
+import type { Category, FeatureEntry, DocumentType } from '@shared/ipc-types'
 
 export interface Selection {
   feature: string
@@ -10,6 +10,10 @@ interface VaultState {
   vaultPath: string
   vaultName: string
   features: FeatureEntry[]
+  /** All categories defined in the vault. Single source of truth for pickers —
+   *  reloaded by `refresh()` so a delete/rename in CategoryManager (or a sync)
+   *  never leaves a stale option in a dropdown. */
+  categories: Category[]
   /** The one feature + document type currently open (only one feature at a time). */
   active: Selection | null
 }
@@ -33,9 +37,12 @@ export function useVault(): UseVaultReturn {
   const vaultPathRef = useRef<string | null>(null)
 
   const openVault = useCallback(async (path: string, name: string) => {
-    const features = await window.signoff.features.list(path)
+    const [features, categories] = await Promise.all([
+      window.signoff.features.list(path),
+      window.signoff.categories.list(path),
+    ])
     vaultPathRef.current = path
-    setState({ vaultPath: path, vaultName: name, features, active: null })
+    setState({ vaultPath: path, vaultName: name, features, categories, active: null })
   }, [])
 
   const closeVault = useCallback(() => {
@@ -58,8 +65,11 @@ export function useVault(): UseVaultReturn {
 
   const refresh = useCallback(async () => {
     if (!vaultPathRef.current) return
-    const features = await window.signoff.features.list(vaultPathRef.current)
-    setState((prev) => (prev ? { ...prev, features } : prev))
+    const [features, categories] = await Promise.all([
+      window.signoff.features.list(vaultPathRef.current),
+      window.signoff.categories.list(vaultPathRef.current),
+    ])
+    setState((prev) => (prev ? { ...prev, features, categories } : prev))
   }, [])
 
   return { state, openVault, closeVault, selectFeature, selectType, refresh }

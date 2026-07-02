@@ -28,7 +28,7 @@ AI coding agents are fast and eager — they'll happily implement a half-baked s
 ```
 
 1. The agent calls **`publish_document`** to push a spec/plan into the vault.
-2. The reviewer pulls it into the **SignOff desktop app**, reads it, comments, and **approves** or **requests changes**.
+2. The reviewer pulls it into the **SignOff desktop app**, reads it, comments **inline** (on a heading or a selected passage), and **approves** or **requests changes**.
 3. The agent calls **`check_approval`** before implementing — and only proceeds once the document is signed off.
 
 ## Components
@@ -37,9 +37,20 @@ This is an npm-workspaces monorepo with three pieces:
 
 | Package | What it does |
 |---|---|
-| [`packages/vault-core`](packages/vault-core) | Shared engine — git operations and the approval state machine. Create/open vaults, publish documents, read/write approval records with full history. Transactional and conflict-safe. |
+| [`packages/vault-core`](packages/vault-core) | Shared engine — git operations and the approval state machine. Create/open vaults, publish spec / plan / **ADR** documents, read/write approval records with full history, reviewer quorum, **diagram gating**, and per-feature metadata (category, weight, tags, ticket). Transactional and conflict-safe. |
 | [`packages/mcp-server`](packages/mcp-server) | MCP server exposing three tools to Claude Code: **`publish_document`**, **`check_approval`**, **`list_pending`**. |
-| [`apps/desktop`](apps/desktop) | Electron + React review app for humans — review workflow, threaded discussion, git sync, multi-vault switching, and rich markdown (Mermaid, KaTeX, syntax highlighting) with light/dark themes. |
+| [`apps/desktop`](apps/desktop) | Electron + React review app for humans (see below). |
+
+### In the reviewer app
+
+- **Inspector** — a right-hand panel with a **sign-off seal** (the review state at a glance), the document's details (category, weight, tags, linked ticket), and a **Review ｜ Discussion** switch.
+- **Inline comments** — add a comment from any heading or by selecting text; the anchored passage is highlighted in the document, and the Discussion tab shows only the sections that actually have comments.
+- **Review workflow** — start review, approve or request changes with a note, reopen, per-vault required approvers and minimum-approval quorum, and a full decision history.
+- **Documents** — spec / plan / **ADR** tabs, read / split / edit modes (full-width by default), and rich markdown: **Mermaid** diagrams, **KaTeX**, and syntax highlighting, with light/dark themes.
+- **Diagram gating** — a spec or plan can be required to include a diagram before it can be approved.
+- **Organize** — search, filter by status/tag, group by feature / status / category, and manage colored categories.
+- **Git sync** — pull/push, publish a branch, connect a remote or clone one, plus **auto-sync** on a timer (default every 5 minutes) that also picks up newly added documents.
+- **Multi-vault** — switch between projects; open an existing vault, start a new one, or clone from GitHub.
 
 ### Turn on the gate in Claude Code
 
@@ -121,4 +132,4 @@ signoff/
 
 ## Status
 
-Early `0.1.0` — the full pipeline works end to end, but expect rough edges and breaking changes before `1.0`.
+`0.2.0` — the full pipeline works end to end, but expect rough edges and breaking changes before `1.0`.

@@ -39,10 +39,12 @@ function relTime(ts: number | null): string {
 }
 
 const cls =
-  'flex items-center gap-1.5 px-2 h-full text-railfg/55 hover:text-railfg hover:bg-railfg/[0.06] transition-colors'
+  'flex items-center gap-1.5 px-2 h-full text-muted hover:text-fg hover:bg-iris-soft transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-iris/40'
+
+const LABEL = 'font-mono text-[10.5px] font-semibold tracking-wide text-muted'
 
 function Sep(): React.ReactElement {
-  return <span className="w-px h-3.5 bg-railfg/[0.12]" />
+  return <span className="w-px h-3.5 bg-border self-center" />
 }
 
 export function StatusBar({
@@ -115,23 +117,23 @@ export function StatusBar({
     return { label: repo.label, sub: null, tone: 'ok' }
   }
   const git = gitState()
-  const toneClass = { ok: 'text-railfg/70', wait: 'text-wait', dim: 'text-railfg/40' }[git.tone]
+  const toneClass = { ok: 'text-fg/70', wait: 'text-wait', dim: 'text-faint' }[git.tone]
 
   return (
     <footer
       ref={barRef}
-      className="relative h-7 shrink-0 bg-rail border-t border-railfg/[0.08] flex items-stretch text-[11px] font-mono text-railfg/55"
+      className="relative h-7 shrink-0 bg-rail border-t border-border flex items-stretch text-[11px] font-mono text-muted"
     >
       {/* Identity */}
       <button className={cls} onClick={() => setOpen(open === 'identity' ? null : 'identity')} title="Reviewer identity">
         <span className="w-1.5 h-1.5 rounded-full bg-ok" />
-        <span className="text-railfg/70">{author?.name ?? '…'}</span>
+        <span className="text-fg/70">{author?.name ?? '…'}</span>
       </button>
       {open === 'identity' && author && (
         <Popover>
           <p className="text-fg font-medium">{author.name}</p>
-          <p className="text-fg/55">{author.email}</p>
-          <p className="text-fg/40 mt-1 text-[11px]">Decisions are committed under this git identity.</p>
+          <p className="text-muted">{author.email}</p>
+          <p className="text-faint mt-1 text-[11px]">Decisions are committed under this git identity.</p>
         </Popover>
       )}
       <Sep />
@@ -143,13 +145,13 @@ export function StatusBar({
       {open === 'vault' && (
         <Popover>
           <p className="text-fg font-medium">{vaultName}</p>
-          <p className="text-fg/45 font-mono text-[11px] truncate">{vaultPath}</p>
+          <p className="text-muted font-mono text-[11px] truncate">{vaultPath}</p>
           <button
             onClick={() => {
               setOpen(null)
               onSwitchVault()
             }}
-            className="mt-2 text-iris hover:underline text-[12px]"
+            className="mt-2 text-iris hover:text-iris-ink hover:underline text-[12px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
           >
             Switch project
           </button>
@@ -162,12 +164,12 @@ export function StatusBar({
                 setConnectMsg(`Couldn't connect: ${err instanceof Error ? err.message : String(err)}`)
               }
             }}
-            className="mt-2 block text-iris hover:underline text-[12px]"
+            className="mt-2 block text-iris hover:text-iris-ink hover:underline text-[12px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
           >
             Connect to Claude Code
           </button>
-          {connectMsg && <p className="mt-1.5 text-[11px] text-fg/50 break-all">{connectMsg}</p>}
-          <p className="mt-1.5 text-[11px] text-fg/40">
+          {connectMsg && <p className="mt-1.5 text-[11px] text-muted break-all">{connectMsg}</p>}
+          <p className="mt-1.5 text-[11px] text-faint">
             Requires the SignOff npm packages (or use the Claude Code plugin).
           </p>
         </Popover>
@@ -181,14 +183,19 @@ export function StatusBar({
         <GitHubMark />
         <span className={toneClass}>{git.label}</span>
         {git.sub && (
-          <span className={`px-1.5 py-px rounded text-[10px] font-medium ${git.tone === 'wait' ? 'bg-wait/15 text-wait' : 'text-railfg/45'}`}>
+          <span className={`px-1.5 py-px rounded-full text-[10px] font-medium ${git.tone === 'wait' ? 'bg-wait-soft text-wait' : 'text-muted'}`}>
             {git.sub}
           </span>
         )}
       </button>
 
-      {/* Sync now */}
-      <button className={cls} onClick={onSyncNow} disabled={syncing} title="Pull and push now">
+      {/* Sync now — the sync control uses the brand iris on hover */}
+      <button
+        className="flex items-center gap-1.5 px-2 h-full text-muted hover:text-iris hover:bg-iris-soft transition-colors disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-iris/40"
+        onClick={onSyncNow}
+        disabled={syncing}
+        title="Pull and push now"
+      >
         <SyncIcon spin={syncing} />
         <span>{syncing ? 'syncing…' : relTime(lastSyncedAt)}</span>
       </button>
@@ -207,38 +214,38 @@ export function StatusBar({
       </button>
       {open === 'settings' && (
         <Popover align="right">
-          <p className="text-[11px] font-semibold text-fg/45 mb-1.5">Theme</p>
-          <div className="flex gap-1.5 mb-3">
+          <p className={LABEL}>Theme</p>
+          <div className="mt-1.5 mb-3 flex gap-1 rounded-lg border border-border bg-app p-1">
             {(['light', 'dark'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => onSetTheme(t)}
-                className={`flex-1 capitalize px-2 py-1 rounded-md text-[12px] border transition ${
+                className={`flex-1 capitalize rounded-md px-2 py-1 text-[12px] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
                   theme === t
-                    ? 'border-iris bg-iris-soft text-iris-ink font-medium'
-                    : 'border-border text-fg/70 hover:bg-app'
+                    ? 'bg-surface text-iris-ink font-semibold shadow-sm'
+                    : 'text-muted hover:text-fg'
                 }`}
               >
                 {t}
               </button>
             ))}
           </div>
-          <p className="text-[11px] font-semibold text-fg/45 mb-1.5">Auto-sync with git</p>
-          <div className="flex flex-col">
+          <p className={LABEL}>Auto-sync with git</p>
+          <div className="mt-1.5 flex flex-col gap-0.5">
             {AUTO_SYNC_OPTIONS.map((o) => (
               <button
                 key={o.ms}
                 onClick={() => onSetAutoSync(o.ms)}
-                className={`flex items-center gap-2 px-2 py-1 rounded text-[12px] text-left ${
-                  o.ms === autoSyncMs ? 'bg-iris-soft text-iris-ink font-medium' : 'text-fg/70 hover:bg-app'
+                className={`flex items-center gap-2 px-2 py-1 rounded-md text-[12px] text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
+                  o.ms === autoSyncMs ? 'bg-iris-soft text-iris-ink font-semibold' : 'text-fg/70 hover:bg-app'
                 }`}
               >
-                <span className="w-3">{o.ms === autoSyncMs ? '✓' : ''}</span>
+                <span className="w-3 text-iris">{o.ms === autoSyncMs ? '✓' : ''}</span>
                 {o.label}
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-fg/40 mt-1.5">Currently: {autoLabel}</p>
+          <p className="text-[11px] text-faint mt-2">Currently: {autoLabel}</p>
         </Popover>
       )}
     </footer>
@@ -271,7 +278,7 @@ function GitHubMark(): React.ReactElement {
 }
 function SyncIcon({ spin }: { spin: boolean }): React.ReactElement {
   return (
-    <svg viewBox="0 0 16 16" className={`w-3.5 h-3.5 ${spin ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.3">
+    <svg viewBox="0 0 16 16" className={`w-3.5 h-3.5 ${spin ? 'motion-safe:animate-spin' : ''}`} fill="none" stroke="currentColor" strokeWidth="1.3">
       <path d="M13.5 8a5.5 5.5 0 01-9.4 3.9M2.5 8a5.5 5.5 0 019.4-3.9" strokeLinecap="round" />
       <path d="M12 1.5V4.5H9M4 14.5V11.5H7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>

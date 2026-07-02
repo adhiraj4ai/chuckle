@@ -3,7 +3,16 @@ import path from "node:path";
 import type { DocumentType } from "./types.js";
 
 export interface CommentEntry { id: string; by: string; at: string; body: string; }
-export interface CommentThread { id: string; section: string; line: number; resolved: boolean; comments: CommentEntry[]; }
+export interface CommentThread {
+  id: string;
+  section: string;
+  line: number;
+  resolved: boolean;
+  /** The exact document text this thread is anchored to (Word-style inline
+   *  comment). Absent for threads anchored to a whole section. */
+  quote?: string;
+  comments: CommentEntry[];
+}
 export interface CommentsFile { version: 1; threads: CommentThread[]; }
 
 export function commentsRelPath(feature: string, type: DocumentType): string {

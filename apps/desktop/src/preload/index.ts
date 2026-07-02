@@ -60,8 +60,8 @@ const api: SignoffAPI = {
   comments: {
     read: (vaultPath, feature, type) =>
       ipcRenderer.invoke('comments:read', { vaultPath, feature, type }),
-    addThread: (vaultPath, feature, type, section, line, body) =>
-      ipcRenderer.invoke('comments:add-thread', { vaultPath, feature, type, section, line, body }),
+    addThread: (vaultPath, feature, type, section, line, body, quote) =>
+      ipcRenderer.invoke('comments:add-thread', { vaultPath, feature, type, section, line, body, quote }),
     addReply: (vaultPath, feature, type, threadId, body) =>
       ipcRenderer.invoke('comments:add-reply', { vaultPath, feature, type, threadId, body }),
     setResolved: (vaultPath, feature, type, threadId, resolved) =>

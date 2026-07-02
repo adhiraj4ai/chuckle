@@ -18,7 +18,7 @@ function statusPill(status: Status): string {
   if (status === 'in_review') return 'bg-wait-soft text-wait'
   if (status === 'approved') return 'bg-ok-soft text-ok'
   if (status === 'rejected') return 'bg-stop-soft text-stop'
-  return 'bg-app text-fg/45'
+  return 'bg-app text-muted'
 }
 
 function statusDot(status: Status): string {
@@ -45,7 +45,7 @@ function reviewerStatusPill(status: ReviewerStatus): string {
   if (status === 'approved') return 'bg-ok-soft text-ok'
   if (status === 'changes_requested') return 'bg-stop-soft text-stop'
   if (status === 'in_review') return 'bg-wait-soft text-wait'
-  return 'bg-app text-fg/45'
+  return 'bg-app text-muted'
 }
 
 interface Props {
@@ -170,12 +170,12 @@ export function ReviewPanel({
 
   if (showSettings) {
     return (
-      <aside className="w-80 min-w-80 border-l border-border bg-surface flex flex-col h-full overflow-y-auto">
+      <div className="flex flex-col h-full overflow-y-auto">
         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-[11px] font-semibold text-fg/45">Reviewer settings</h2>
+          <h2 className="text-[11px] font-semibold text-muted">Reviewer settings</h2>
           <button
             onClick={() => setShowSettings(false)}
-            className="text-[12px] text-fg/50 hover:text-fg transition"
+            className="text-[12px] text-muted hover:text-fg transition"
           >
             Back
           </button>
@@ -183,24 +183,24 @@ export function ReviewPanel({
         <div className="p-5">
           <ReviewerSettings vaultPath={vaultPath} onClose={() => setShowSettings(false)} />
         </div>
-      </aside>
+      </div>
     )
   }
 
   return (
-    <aside className="w-80 min-w-80 border-l border-border bg-surface flex flex-col h-full overflow-y-auto">
+    <div className="flex flex-col h-full overflow-y-auto">
       <div className="px-5 py-4 border-b border-border">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[11px] font-semibold text-fg/45">Review</h2>
+          <h2 className="text-[11px] font-semibold text-muted">Review</h2>
           <button
             onClick={() => setShowSettings(true)}
-            className="text-[11px] text-fg/40 hover:text-iris transition px-1.5 py-0.5 rounded hover:bg-iris/10"
+            className="text-[11px] text-faint hover:text-iris transition px-1.5 py-0.5 rounded hover:bg-iris-soft"
           >
             Reviewers
           </button>
         </div>
         {record === undefined ? (
-          <p className="text-[12px] text-fg/40">Loading…</p>
+          <p className="text-[12px] text-faint">Loading…</p>
         ) : (
           <div className="space-y-2.5">
             <span
@@ -210,12 +210,12 @@ export function ReviewPanel({
               {statusLabel(derivedStatus)}
             </span>
             {submittedBy && (
-              <p className="text-[12px] text-fg/50">
+              <p className="text-[12px] text-muted">
                 Submitted by <span className="text-fg/75">{submittedBy}</span>
               </p>
             )}
             {workflow && derivedStatus !== 'approved' && (
-              <p className="text-[11.5px] leading-relaxed text-fg/45">
+              <p className="text-[11.5px] leading-relaxed text-muted">
                 Needs {workflow.min_approvals} approval
                 {workflow.min_approvals === 1 ? '' : 's'}
               </p>
@@ -227,7 +227,7 @@ export function ReviewPanel({
       {/* Reviewers list */}
       {record !== undefined && reviewerList.length > 0 && (
         <div className="px-5 py-4 border-b border-border">
-          <h3 className="text-[11px] font-semibold text-fg/45 mb-1.5">Reviewers</h3>
+          <h3 className="text-[11px] font-semibold text-muted mb-1.5">Reviewers</h3>
           {(() => {
             const approvedCount = reviewerList.filter(
               (e) => record?.reviewers?.[e]?.status === 'approved'
@@ -237,7 +237,7 @@ export function ReviewPanel({
             ).length
             const total = reviewerList.length
             return (
-              <p className="text-[11px] text-fg/45 mb-2.5">
+              <p className="text-[11px] text-muted mb-2.5">
                 {approvedCount} of {total} approved
                 {changesCount > 0 ? ` · ${changesCount} requested changes` : ''}
               </p>
@@ -261,7 +261,7 @@ export function ReviewPanel({
                     <span className="text-[12px] text-fg/75 truncate">{email}</span>
                     <span className="flex items-center gap-1.5 shrink-0">
                       {hasActed && entry?.at && (
-                        <span className="text-[11px] text-fg/40">{formatReviewerDate(entry.at)}</span>
+                        <span className="text-[11px] text-faint">{formatReviewerDate(entry.at)}</span>
                       )}
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium whitespace-nowrap ${reviewerStatusPill(rs)}`}>
                         {reviewerStatusLabel(rs)}
@@ -313,11 +313,11 @@ export function ReviewPanel({
                 </>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-[12px] text-fg/60">
+                  <p className="text-[12px] text-muted">
                     {pendingAction === 'approve' ? 'Approve with note' : 'Request changes'}
                   </p>
                   <textarea
-                    className="w-full rounded-lg bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-iris/30 text-[13px] text-fg/90 placeholder:text-fg/35 px-3 py-2 resize-none"
+                    className="w-full rounded-lg bg-surface border border-border focus:outline-none focus:ring-2 focus:ring-iris/30 text-[13px] text-fg/90 placeholder:text-faint px-3 py-2 resize-none"
                     rows={3}
                     placeholder="Add a note (optional)…"
                     value={note}
@@ -334,7 +334,7 @@ export function ReviewPanel({
                   </button>
                   <button
                     onClick={() => { setPendingAction(null); setNote('') }}
-                    className="w-full px-4 py-2 rounded-lg border border-border text-fg/55 text-[13px] font-medium hover:bg-app transition"
+                    className="w-full px-4 py-2 rounded-lg border border-border text-muted text-[13px] font-medium hover:bg-app transition"
                   >
                     Cancel
                   </button>
@@ -344,7 +344,7 @@ export function ReviewPanel({
           )}
           {(meStatus === 'approved' || meStatus === 'changes_requested') && (
             <>
-              <p className="text-[12px] text-fg/50">
+              <p className="text-[12px] text-muted">
                 Your decision:{' '}
                 <span className={meStatus === 'approved' ? 'text-ok' : 'text-stop'}>
                   {meStatus === 'approved' ? 'Approved' : 'Changes requested'}
@@ -366,7 +366,7 @@ export function ReviewPanel({
 
       {/* Vault access */}
       <div className="px-5 py-4 border-t border-border mt-auto">
-        <h3 className="text-[11px] font-semibold text-fg/45 mb-2">Vault access</h3>
+        <h3 className="text-[11px] font-semibold text-muted mb-2">Vault access</h3>
         {vaultRemote ? (
           <div className="space-y-1.5">
             <div className="flex items-center gap-1.5 min-w-0">
@@ -376,17 +376,17 @@ export function ReviewPanel({
               <button
                 onClick={copyRemote}
                 title="Copy clone URL"
-                className="shrink-0 text-[11px] text-fg/40 hover:text-iris transition px-1.5 py-0.5 rounded hover:bg-iris/10"
+                className="shrink-0 text-[11px] text-faint hover:text-iris transition px-1.5 py-0.5 rounded hover:bg-iris-soft"
               >
                 {copied ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <p className="text-[11px] text-fg/45 leading-relaxed">
+            <p className="text-[11px] text-muted leading-relaxed">
               Reviewers clone this repo and are recognized by their git email.
             </p>
           </div>
         ) : vaultRemote === null ? (
-          <p className="text-[11px] text-fg/40 leading-relaxed">
+          <p className="text-[11px] text-muted leading-relaxed">
             Configure a remote in source control so reviewers can access the vault.
           </p>
         ) : null}
@@ -396,6 +396,6 @@ export function ReviewPanel({
           </p>
         )}
       </div>
-    </aside>
+    </div>
   )
 }

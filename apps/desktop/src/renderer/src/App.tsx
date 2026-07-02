@@ -2,16 +2,14 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { VaultSwitcher } from './components/VaultSwitcher'
 import { Sidebar } from './components/Sidebar'
 import { DocumentPane } from './components/DocumentPane'
-import { ReviewPanel } from './components/ReviewPanel'
-import { DiscussionRail } from './components/DiscussionRail.js'
+import { Inspector } from './components/Inspector'
 import { StatusBar } from './components/StatusBar'
 import { GitPanel } from './components/GitPanel'
-import { FeatureMetaBar } from './components/FeatureMetaBar'
 import { CategoryManager } from './components/CategoryManager'
 import { useVault } from './hooks/useVault'
 import { useAutoSync } from './hooks/useAutoSync'
 import { useSeenFeatures } from './hooks/useSeenFeatures'
-import type { ApprovalRecord, ApprovalStatus, DocumentType, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
+import type { ApprovalRecord, ApprovalStatus, Category, DocumentType, FeatureEntry, ReviewResult, WorkflowConfig } from '@shared/ipc-types'
 
 const DOC_TYPES: DocumentType[] = ['spec', 'plan', 'adr']
 
@@ -19,25 +17,39 @@ type ActionDone = (result?: ReviewResult) => void
 
 export function SelectedDocument({
   vaultPath,
-  feature,
+  featureEntry,
   type,
   docTypes,
+  categories,
+  reloadKey,
   onSelectType,
   onActionComplete,
+  onChanged,
+  onManageCategories,
 }: {
   vaultPath: string
-  feature: string
+  featureEntry: FeatureEntry
   type: DocumentType
   docTypes: { type: DocumentType; status: ApprovalStatus | 'not_found' }[]
+  categories: Category[]
+  /** Bumped on every sync so the open document re-reads its content + record. */
+  reloadKey: number
   onSelectType: (type: DocumentType) => void
   onActionComplete: ActionDone
+  onChanged: () => void
+  onManageCategories?: () => void
 }): React.ReactElement {
+  const feature = featureEntry.name
   const [record, setRecord] = useState<ApprovalRecord | null | undefined>(undefined)
   const [workflow, setWorkflow] = useState<WorkflowConfig | undefined>(undefined)
   const [missingDiagram, setMissingDiagram] = useState(false)
   const [reload, setReload] = useState(0)
-  const [showDiscussion, setShowDiscussion] = useState(false)
   const [markdown, setMarkdown] = useState('')
+  // A comment request from the document (heading button or text selection);
+  // the nonce lets the same section be requested twice in a row.
+  const [commentReq, setCommentReq] = useState<{ slug: string; text: string; quote?: string; nonce: number } | null>(null)
+  // Bumped whenever a comment changes so the document's highlights re-read.
+  const [commentsVersion, setCommentsVersion] = useState(0)
 
   useEffect(() => {
     // `alive` guards against a stale/late response overwriting newer state (or
@@ -62,9 +74,12 @@ export function SelectedDocument({
         setMissingDiagram(false)
       })
     return () => { alive = false }
-  }, [vaultPath, feature, type, reload])
+    // reloadKey: a sync may have pulled a newer record for the open document.
+  }, [vaultPath, feature, type, reload, reloadKey])
 
   useEffect(() => {
+    // reloadKey: re-read the markdown after a sync so pulled edits appear in the
+    // open pane (the pane no longer stays stale until you switch documents).
     let alive = true
     setMarkdown('')
     window.signoff.document
@@ -72,7 +87,7 @@ export function SelectedDocument({
       .then((m) => { if (alive) setMarkdown(m) })
       .catch(() => { if (alive) setMarkdown('') })
     return () => { alive = false }
-  }, [vaultPath, feature, type])
+  }, [vaultPath, feature, type, reloadKey])
 
   // refetch this document's record after an action, then bubble up
   const onDone: ActionDone = (result) => {
@@ -81,53 +96,36 @@ export function SelectedDocument({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      {/* Discussion toggle bar */}
-      <div className="flex items-center justify-end px-4 py-1.5 bg-surface border-b border-border gap-2">
-        <button
-          onClick={() => setShowDiscussion((v) => !v)}
-          aria-pressed={showDiscussion}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11.5px] font-medium transition ${
-            showDiscussion ? 'bg-iris/10 text-iris' : 'text-fg/45 hover:text-fg/80 hover:bg-app/60'
-          }`}
-        >
-          <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.4">
-            <path d="M2 3.5C2 3 2.4 2.5 3 2.5h10c.6 0 1 .5 1 1v7c0 .5-.4 1-1 1H5l-3 2V3.5z" strokeLinejoin="round" />
-          </svg>
-          Discussion
-        </button>
-      </div>
-      <div className="flex-1 flex overflow-hidden">
-        <DocumentPane
-          vaultPath={vaultPath}
-          feature={feature}
-          type={type}
-          docTypes={docTypes}
-          onSelectType={onSelectType}
-          onSaved={onDone}
-        />
-        {showDiscussion ? (
-          <aside className="w-80 min-w-80 border-l border-border bg-surface flex flex-col h-full overflow-hidden">
-            <DiscussionRail
-              vaultPath={vaultPath}
-              feature={feature}
-              type={type}
-              markdown={markdown}
-            />
-          </aside>
-        ) : (
-          <ReviewPanel
-            vaultPath={vaultPath}
-            feature={feature}
-            type={type}
-            record={record}
-            derivedStatus={docTypes.find((d) => d.type === type)?.status ?? 'not_found'}
-            workflow={workflow}
-            missingDiagram={missingDiagram}
-            onActionComplete={onDone}
-          />
-        )}
-      </div>
+    <div className="flex-1 flex overflow-hidden min-h-0">
+      <DocumentPane
+        vaultPath={vaultPath}
+        feature={feature}
+        type={type}
+        docTypes={docTypes}
+        onSelectType={onSelectType}
+        onSaved={onDone}
+        onComment={(r) => setCommentReq((prev) => ({ ...r, nonce: (prev?.nonce ?? 0) + 1 }))}
+        commentsVersion={commentsVersion}
+        onFocusSection={(slug) => setCommentReq((prev) => ({ slug, text: '', nonce: (prev?.nonce ?? 0) + 1 }))}
+      />
+      <Inspector
+        vaultPath={vaultPath}
+        feature={featureEntry}
+        type={type}
+        docTypes={docTypes}
+        categories={categories}
+        record={record}
+        workflow={workflow}
+        missingDiagram={missingDiagram}
+        markdown={markdown}
+        reloadKey={reloadKey}
+        commentRequest={commentReq}
+        commentsVersion={commentsVersion}
+        onActionComplete={onDone}
+        onChanged={onChanged}
+        onManageCategories={onManageCategories}
+        onCommentsChanged={() => setCommentsVersion((v) => v + 1)}
+      />
     </div>
   )
 }
@@ -140,9 +138,12 @@ export function App(): React.ReactElement {
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null)
   const [syncKey, setSyncKey] = useState(0)
   const [toast, setToast] = useState<{ text: string; ok: boolean; conflict?: boolean } | null>(null)
-  const [autoSyncMs, setAutoSyncMs] = useState<number>(
-    () => Number(localStorage.getItem('signoff.autoSyncMs')) || 0
-  )
+  const [autoSyncMs, setAutoSyncMs] = useState<number>(() => {
+    // Default to a 5-minute auto-sync on first run so newly published documents
+    // appear without a manual pull. An explicit "Off" (stored "0") is respected.
+    const stored = localStorage.getItem('signoff.autoSyncMs')
+    return stored === null ? 300_000 : Number(stored) || 0
+  })
   const [theme, setTheme] = useState<'light' | 'dark'>(
     () => (localStorage.getItem('signoff.theme') === 'dark' ? 'dark' : 'light')
   )
@@ -254,6 +255,7 @@ export function App(): React.ReactElement {
         <Sidebar
           vaultName={state.vaultName}
           features={state.features}
+          categories={state.categories}
           selected={active}
           onSelect={onSelectFeature}
           onSync={syncNow}
@@ -274,22 +276,21 @@ export function App(): React.ReactElement {
                 </p>
               </div>
             </div>
-          ) : (
-            <>
-              {activeEntry && (
-                <FeatureMetaBar vaultPath={state.vaultPath} feature={activeEntry} onChanged={refresh} />
-              )}
-              <SelectedDocument
-                key={`${active.feature}:${active.type}`}
-                vaultPath={state.vaultPath}
-                feature={active.feature}
-                type={active.type}
-                docTypes={activeTypes}
-                onSelectType={selectType}
-                onActionComplete={onActionComplete}
-              />
-            </>
-          )}
+          ) : activeEntry ? (
+            <SelectedDocument
+              key={`${active.feature}:${active.type}`}
+              vaultPath={state.vaultPath}
+              featureEntry={activeEntry}
+              type={active.type}
+              docTypes={activeTypes}
+              categories={state.categories}
+              reloadKey={syncKey}
+              onSelectType={selectType}
+              onActionComplete={onActionComplete}
+              onChanged={refresh}
+              onManageCategories={() => setManagerOpen(true)}
+            />
+          ) : null}
         </div>
       </div>
 

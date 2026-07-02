@@ -1,13 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="SignOff">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1e40af"/>
-      <stop offset="1" stop-color="#102356"/>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6d69e0"/>
+      <stop offset="1" stop-color="#4b47bd"/>
+    </linearGradient>
+    <linearGradient id="nib" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#e7e6f6"/>
+    </linearGradient>
+    <linearGradient id="swash" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e0a021"/>
+      <stop offset="1" stop-color="#1f9d6b"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="114" fill="url(#g)"/>
-  <path d="M150 268l74 74L366 178" fill="none" stroke="#ffffff" stroke-width="46"
-        stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M132 392c74 30 178 22 256-20" fill="none" stroke="#facc15"
-        stroke-width="28" stroke-linecap="round"/>
+  <rect width="512" height="512" rx="114" fill="url(#tile)"/>
+  <path d="M128 425.6C208 454.4 320 448 400 387.2" fill="none"
+        stroke="url(#swash)" stroke-width="35.2" stroke-linecap="round"/>
+  <path d="M256 398.4C204.8 326.4 176 256 182.4 193.6C185.6 158.4 217.6 142.4 256 142.4C294.4 142.4 326.4 158.4 329.6 193.6C336 256 307.2 326.4 256 398.4Z"
+        fill="url(#nib)"/>
+  <line x1="256" y1="219.2" x2="256" y2="374.4" stroke="#4b47bd" stroke-width="17.6" stroke-linecap="round"/>
+  <circle cx="256" cy="198.4" r="25.6" fill="#d99320"/>
 </svg>

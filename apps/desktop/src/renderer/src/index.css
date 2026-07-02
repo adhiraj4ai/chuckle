@@ -2,22 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Theme tokens as "R G B" triplets so Tailwind alpha modifiers work. */
+/* Theme tokens as "R G B" triplets so Tailwind alpha modifiers work.
+   Neutrals carry a faint iris bias so the brand is present even in the chrome. */
 :root {
-  --app: 245 246 248; /* #f5f6f8 */
-  --surface: 255 255 255; /* #ffffff */
-  --rail: 255 255 255; /* light: sidebar is white too */
+  --app: 244 243 251; /* #f4f3fb — faint iris-tinted app ground */
+  --surface: 255 255 255; /* #ffffff — cards / paper / rails */
+  --rail: 251 251 254; /* #fbfbfe — sidebar & inspector, a hair off-white */
   --railfg: 22 24 29; /* dark text on the light rail */
   --fg: 22 24 29; /* #16181d */
-  --border: 230 232 236; /* #e6e8ec */
+  --border: 231 230 240; /* #e7e6f0 — iris-biased hairline */
+  --muted: 107 113 128; /* #6b7180 — secondary text (exact artifact) */
+  --faint: 154 160 173; /* #9aa0ad — tertiary text / placeholders (exact artifact) */
+  --border-soft: 238 237 245; /* #eeedf5 — subtle inner dividers */
 }
 .dark {
-  --app: 21 24 31; /* #15181f */
-  --surface: 28 31 39; /* #1c1f27 */
-  --rail: 15 17 21; /* #0f1115 */
+  --app: 20 21 30; /* #14151e — iris-tinted dark ground */
+  --surface: 28 30 41; /* #1c1e29 */
+  --rail: 16 17 25; /* #101119 */
   --railfg: 231 233 238;
   --fg: 231 233 238; /* #e7e9ee */
-  --border: 44 48 58; /* #2c303a */
+  --border: 45 46 62; /* #2d2e3e — iris-biased hairline */
+  --muted: 139 147 163; /* #8b93a3 — readable secondary text on dark */
+  --faint: 107 113 128; /* #6b7180 */
+  --border-soft: 34 35 47; /* #22232f — subtle inner dividers */
 }
 
 @layer base {
@@ -93,6 +100,17 @@
   }
   .doc blockquote {
     @apply border-l-2 border-iris/40 pl-4 my-5 text-fg/55 not-italic;
+  }
+  /* Inline comment anchor: a commented text span, clickable to open its thread. */
+  .doc mark.sio-comment {
+    @apply bg-iris-soft rounded-[3px] cursor-pointer text-inherit;
+    text-decoration: underline;
+    text-decoration-color: #5b57d6;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+  }
+  .doc mark.sio-comment:hover {
+    @apply bg-iris/25;
   }
   .doc hr {
     @apply my-7 border-border;

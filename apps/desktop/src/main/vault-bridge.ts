@@ -20,6 +20,7 @@ import {
   approvalRelPath,
   readManifest,
   writeManifest,
+  getFeatureDoc,
   manifestRelPath,
   listCategories,
   upsertCategory,
@@ -328,8 +329,48 @@ export async function openExistingVault(selected: string): Promise<VaultOpenResu
   return { name: manager.config.name, path: vaultDir, ...(warning ? { warning } : {}) }
 }
 
+/**
+ * Register any markdown in the project's doc roots that isn't already in the
+ * manifest. Only *new* (feature, type) pairs are submitted — existing docs and
+ * their approval state are left untouched — so this is safe to run on every sync.
+ * Returns the number of newly registered documents.
+ */
+async function importNewProjectDocs(vaultPath: string): Promise<number> {
+  const projectRoot = projectRootOf(vaultPath)
+  const { name, email } = await resolveVaultAuthor(vaultPath)
+  const vault = await VaultManager.open(vaultPath)
+  const cfgRoots = vault.config.doc_roots ?? ['docs']
+  const files: string[] = []
+  for (const root of cfgRoots) files.push(...(await walkMarkdown(path.join(projectRoot, root))))
+  const manifest = await readManifest(vaultPath)
+  const seen = new Set<string>()
+  let count = 0
+  for (const file of files) {
+    const rel = path.relative(projectRoot, file).split(path.sep).join('/')
+    const type = classifyDoc(rel)
+    const feature = inferFeatureName(path.basename(file))
+    if (!feature) continue
+    const key = `${feature}:${type}`
+    if (seen.has(key) || getFeatureDoc(manifest, feature, type)) continue
+    seen.add(key)
+    try {
+      await vault.submitForReview(feature, type, rel, email, name)
+      count++
+    } catch {
+      /* skip a doc that fails to register; sync still succeeds */
+    }
+  }
+  return count
+}
+
 export async function syncVault(vaultPath: string): Promise<void> {
-  await pullRebase(vaultPath)
+  // Pull first, then pick up any newly added local docs. Detection runs even if
+  // the pull fails (offline / no upstream) so local documents still appear.
+  try {
+    await pullRebase(vaultPath)
+  } finally {
+    await importNewProjectDocs(vaultPath).catch(() => {})
+  }
 }
 
 export async function listFeatures(vaultPath: string): Promise<FeatureEntry[]> {
@@ -485,12 +526,13 @@ export async function readDocComments(vaultPath: string, feature: string, type: 
   return readComments(vaultPath, feature, type)
 }
 
-export async function addCommentThread(vaultPath: string, feature: string, type: DocumentType, section: string, line: number, body: string): Promise<CommentsFile> {
+export async function addCommentThread(vaultPath: string, feature: string, type: DocumentType, section: string, line: number, body: string, quote?: string): Promise<CommentsFile> {
   const { email } = await resolveVaultAuthor(vaultPath)
   let out!: CommentsFile
   const result = await transact(vaultPath, async () => {
     out = addThread(await readComments(vaultPath, feature, type), {
       id: randomUUID(), section, line, resolved: false,
+      ...(quote ? { quote } : {}),
       comments: [{ id: randomUUID(), by: email, at: new Date().toISOString(), body }],
     })
     await writeComments(vaultPath, feature, type, out)

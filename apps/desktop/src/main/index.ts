@@ -140,7 +140,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle('document:get-status', (_e, { vaultPath, feature, type }) => getDocumentStatus(vaultPath, feature, type))
   ipcMain.handle('review:action', (_e, { vaultPath, feature, type, action, message }) => reviewAction(vaultPath, feature, type, action, message))
   ipcMain.handle('comments:read', (_e, { vaultPath, feature, type }) => readDocComments(vaultPath, feature, type))
-  ipcMain.handle('comments:add-thread', (_e, { vaultPath, feature, type, section, line, body }) => addCommentThread(vaultPath, feature, type, section, line, body))
+  ipcMain.handle('comments:add-thread', (_e, { vaultPath, feature, type, section, line, body, quote }) => addCommentThread(vaultPath, feature, type, section, line, body, quote))
   ipcMain.handle('comments:add-reply', (_e, { vaultPath, feature, type, threadId, body }) => addCommentReply(vaultPath, feature, type, threadId, body))
   ipcMain.handle('comments:set-resolved', (_e, { vaultPath, feature, type, threadId, resolved }) => setCommentResolved(vaultPath, feature, type, threadId, resolved))
   ipcMain.handle('project:read-claude-md', (_e, { vaultPath }) => readProjectClaudeMd(vaultPath))

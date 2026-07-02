@@ -31,24 +31,52 @@ Use the controls at the top of the sidebar to narrow down what you see:
 
 ### Sync
 
-Click **Sync** in the sidebar header to pull the latest documents from the vault's git remote. Approvals from other reviewers and newly published documents appear after a sync. There is a short delay while git pull and push complete.
+Click **Sync** in the sidebar header to pull the latest documents from the vault's git remote (and push any of your own pending changes). Approvals from other reviewers appear after a sync, and newly published specs and plans are registered automatically — sync detects documents added to the project's doc roots, so they show up without recreating the vault. There is a short delay while git pull and push complete.
+
+Sync also runs on its own schedule. By default the app auto-syncs **every 5 minutes**; you can change the cadence (or turn it off) in the status-bar settings — see [Getting started](02-getting-started.md).
 
 ---
 
 ## Opening a feature
 
-Click a feature row to open it. The main area shows:
+Click a feature row to open it. Alongside the sidebar, the workspace has two columns:
 
-- **FeatureMetaBar** — a header bar with the feature's category, tier (light / standard / heavy), tags, and ticket chip (`PROJ-123 ↗`). You can edit these fields here without affecting the review.
-- **Document tabs** — tabs appear for each document type that has been published: **Spec**, **Plan**, **ADR**. Click a tab to switch.
-- **Document pane** — the selected document renders as formatted markdown, with Mermaid diagrams, syntax-highlighted code, and math (KaTeX) rendered inline.
-- **Review panel** — a sidebar on the right showing the current status, reviewer list, and your available actions.
+- **Document pane** (center) — the selected document renders as formatted markdown, with Mermaid diagrams, syntax-highlighted code, and math (KaTeX) rendered inline. Documents open **full width** by default; a toolbar toggle centers them in a narrower column. **Read / Split / Edit** modes and the **Spec / Plan / ADR** tabs sit in the header.
+- **Inspector** (right) — the panel where you review, sign off, and edit feature metadata. See below.
+
+### Document tabs
+
+Tabs appear in the document header for each document type that has been published: **Spec**, **Plan**, **ADR**. Each tab carries a small status dot. Click a tab to switch.
+
+---
+
+## The inspector
+
+The right-hand **inspector** replaces the old right rail and the horizontal meta bar. Top to bottom, it shows a sign-off seal, a Details block, and a **Review ｜ Discussion** segmented control that switches the panel below it.
+
+### Sign-off seal
+
+At the top, the review state is rendered as a stamped **sign-off seal**:
+
+- A dashed iris seal — **Awaiting sign-off** (or **In review**) — while a decision is pending.
+- A solid green **Signed off** seal once the document is approved.
+- A red **Changes requested** seal when a reviewer has requested changes.
+
+Below the stamp, a caption and a row of **quorum pips** show how many approvals have been collected against the number required (for example, "1 of 2 approvals").
+
+### Details
+
+A **Details** block shows the feature's **Category**, **Weight** (tier), **Tags**, and **Ticket**. All of these are edited here — pick a category from the dropdown, choose a weight, add or remove tag chips, and add or clear a ticket. See [Organizing work](09-organizing-work.md) and [Feature tiers](06-feature-tiers.md) for details.
+
+### Review ｜ Discussion
+
+A segmented control switches the lower half of the inspector between the **Review** panel (below) and the **Discussion** list of comment threads. The Discussion tab shows a count badge when there are open comments.
 
 ---
 
 ## The review panel
 
-The review panel is where you take action on a document.
+The **Review** tab of the inspector is where you take action on a document.
 
 ### Status pill
 
@@ -91,7 +119,20 @@ If you have already approved or requested changes and want to revise your decisi
 
 ### Discussion
 
-Threaded comments on the document appear in the discussion rail alongside the review panel. Use discussion comments for questions or inline feedback that does not constitute a formal review decision.
+Comments are **inline** — you start them from the document itself, and each commented passage is highlighted in place. Use comments for questions or feedback that does not constitute a formal review decision.
+
+**Adding a comment:**
+
+- **Hover a heading** in the document and click the add-comment button that appears to anchor a thread to that section, or
+- **Select some text** and click the floating **Comment** button; the selected passage is attached to the thread as a quote.
+
+Either way the inspector switches to the **Discussion** tab with the composer anchored to the chosen section. The composer is pinned at the bottom and shows which section it is anchored to.
+
+**Reading and resolving:**
+
+- A commented passage is **highlighted** in the document. Click a highlight to jump to its thread.
+- The **Discussion** tab lists **only the sections that actually have comments** — not every heading. Each thread shows its quoted passage, author avatars, the comments and replies, and a **Resolve** action.
+- Resolved threads collapse to a one-line summary you can expand again.
 
 ---
 
