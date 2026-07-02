@@ -208,7 +208,7 @@ export function Sidebar({
     <aside className="w-60 min-w-60 bg-rail text-railfg flex flex-col h-full select-none">
       {/* Brand — logo + wordmark, above the project name */}
       <div className="px-3 pt-3.5 pb-1.5 flex items-center gap-2">
-        <Logo size={26} className="shrink-0" />
+        <Logo size={36} className="shrink-0" />
         <span
           className="text-railfg/90 leading-none"
           style={{ fontFamily: "'SignPainter', 'SignPainter-HouseScript', 'Brush Script MT', cursive", fontWeight: 700, fontSize: '24px' }}
