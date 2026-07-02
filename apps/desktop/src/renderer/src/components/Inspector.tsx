@@ -25,6 +25,8 @@ interface Props {
   markdown: string
   /** Bumped on sync/action so the comment count re-reads. */
   reloadKey: number
+  /** A comment request from the document; switches to Discussion and anchors it. */
+  commentRequest?: { slug: string; text: string; quote?: string; nonce: number } | null
   onActionComplete: (result?: ReviewResult) => void
   onChanged: () => void
   onManageCategories?: () => void
@@ -46,12 +48,18 @@ export function Inspector({
   missingDiagram,
   markdown,
   reloadKey,
+  commentRequest,
   onActionComplete,
   onChanged,
   onManageCategories,
 }: Props): React.ReactElement {
   const [tab, setTab] = useState<'review' | 'discussion'>('review')
   const [openComments, setOpenComments] = useState(0)
+
+  // A comment request from the document opens the Discussion tab.
+  useEffect(() => {
+    if (commentRequest) setTab('discussion')
+  }, [commentRequest?.nonce]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const derivedStatus = docTypes.find((d) => d.type === type)?.status ?? 'not_found'
   const approvedCount = record?.reviewers
@@ -74,7 +82,7 @@ export function Inspector({
 
   const tabBtn = (active: boolean): string =>
     `flex-1 flex items-center justify-center gap-1.5 rounded-md py-1.5 text-[12px] font-semibold transition ${
-      active ? 'bg-surface text-iris-ink shadow-sm' : 'text-fg/50 hover:text-fg/80'
+      active ? 'bg-surface text-iris-ink shadow-sm' : 'text-muted hover:text-fg/80'
     } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40`
 
   return (
@@ -118,7 +126,13 @@ export function Inspector({
 
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         {tab === 'discussion' ? (
-          <DiscussionRail vaultPath={vaultPath} feature={feature.name} type={type} markdown={markdown} />
+          <DiscussionRail
+            vaultPath={vaultPath}
+            feature={feature.name}
+            type={type}
+            markdown={markdown}
+            openRequest={commentRequest ?? null}
+          />
         ) : (
           <ReviewPanel
             vaultPath={vaultPath}

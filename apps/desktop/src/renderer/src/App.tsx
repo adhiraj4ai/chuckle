@@ -45,6 +45,9 @@ export function SelectedDocument({
   const [missingDiagram, setMissingDiagram] = useState(false)
   const [reload, setReload] = useState(0)
   const [markdown, setMarkdown] = useState('')
+  // A comment request from the document (heading button or text selection);
+  // the nonce lets the same section be requested twice in a row.
+  const [commentReq, setCommentReq] = useState<{ slug: string; text: string; quote?: string; nonce: number } | null>(null)
 
   useEffect(() => {
     // `alive` guards against a stale/late response overwriting newer state (or
@@ -99,6 +102,7 @@ export function SelectedDocument({
         docTypes={docTypes}
         onSelectType={onSelectType}
         onSaved={onDone}
+        onComment={(r) => setCommentReq((prev) => ({ ...r, nonce: (prev?.nonce ?? 0) + 1 }))}
       />
       <Inspector
         vaultPath={vaultPath}
@@ -111,6 +115,7 @@ export function SelectedDocument({
         missingDiagram={missingDiagram}
         markdown={markdown}
         reloadKey={reloadKey}
+        commentRequest={commentReq}
         onActionComplete={onDone}
         onChanged={onChanged}
         onManageCategories={onManageCategories}

@@ -5,7 +5,16 @@ import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
 import type { ApprovalStatus, DocumentType, ReviewResult } from '@shared/ipc-types'
 import { humanizeFeature } from '../lib/feature'
+import { slugifyHeading } from '../lib/headings.js'
 import { MermaidDiagram } from './MermaidDiagram'
+
+/** A request to comment on part of the document, raised from a heading button
+ *  or a text selection. `quote` is the selected text (Word-style inline comment). */
+export interface CommentRequest {
+  slug: string
+  text: string
+  quote?: string
+}
 
 /** Recursively collect text from a React markdown node (survives hljs token spans). */
 function nodeText(node: React.ReactNode): string {
@@ -18,27 +27,72 @@ function nodeText(node: React.ReactNode): string {
   return ''
 }
 
-const markdownComponents: Components = {
-  pre(props) {
-    const { children } = props
-    const child = Array.isArray(children) ? children[0] : children
-    const className =
-      child && typeof child === 'object' && 'props' in child
-        ? ((child as { props: { className?: string } }).props.className ?? '')
-        : ''
-    if (/language-mermaid/.test(className)) {
-      return <MermaidDiagram code={nodeText(child).replace(/\n$/, '')} />
+const CommentGlyph = (): React.ReactElement => (
+  <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <path d="M2 3.5C2 3 2.4 2.5 3 2.5h10c.6 0 1 .5 1 1v6c0 .5-.4 1-1 1H6l-3 2.5V3.5z" strokeLinejoin="round" />
+    <path d="M6 6h5M6 8h3" strokeLinecap="round" />
+  </svg>
+)
+
+/** Build markdown renderers. When `onComment` is supplied, headings gain a
+ *  hover "add comment" button that anchors a thread to that section. */
+function makeComponents(onComment?: (r: CommentRequest) => void): Components {
+  const heading =
+    (level: 1 | 2 | 3) =>
+    function H({ children }: { children?: React.ReactNode }): React.ReactElement {
+      const Tag = `h${level}` as 'h1'
+      const text = nodeText(children)
+      const slug = slugifyHeading(text)
+      return (
+        <Tag data-slug={slug} className="group/h">
+          {children}
+          {onComment && (
+            <button
+              type="button"
+              contentEditable={false}
+              onClick={() => onComment({ slug, text })}
+              aria-label={`Comment on ${text}`}
+              title={`Comment on ${text}`}
+              className="ml-2 align-middle inline-flex items-center justify-center w-6 h-6 rounded-md text-faint opacity-0 group-hover/h:opacity-100 focus:opacity-100 hover:text-iris hover:bg-iris-soft transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 align-middle"
+            >
+              <CommentGlyph />
+            </button>
+          )}
+        </Tag>
+      )
     }
-    return <pre>{children}</pre>
-  },
+
+  return {
+    pre(props) {
+      const { children } = props
+      const child = Array.isArray(children) ? children[0] : children
+      const className =
+        child && typeof child === 'object' && 'props' in child
+          ? ((child as { props: { className?: string } }).props.className ?? '')
+          : ''
+      if (/language-mermaid/.test(className)) {
+        return <MermaidDiagram code={nodeText(child).replace(/\n$/, '')} />
+      }
+      return <pre>{children}</pre>
+    },
+    h1: heading(1),
+    h2: heading(2),
+    h3: heading(3),
+  }
 }
 
-function Markdown({ content }: { content: string }): React.ReactElement {
+function Markdown({
+  content,
+  onComment,
+}: {
+  content: string
+  onComment?: (r: CommentRequest) => void
+}): React.ReactElement {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
       rehypePlugins={[[rehypeHighlight, { ignoreMissing: true }]]}
-      components={markdownComponents}
+      components={makeComponents(onComment)}
     >
       {content}
     </ReactMarkdown>
@@ -57,6 +111,8 @@ interface Props {
   /** Switch the open document type within this feature. */
   onSelectType?: (type: DocumentType) => void
   onSaved?: (result: ReviewResult) => void
+  /** Raised when the reader asks to comment on a heading or a text selection. */
+  onComment?: (req: CommentRequest) => void
 }
 
 function statusDot(status: DocStatus): string {
@@ -121,6 +177,7 @@ export function DocumentPane({
   docTypes,
   onSelectType,
   onSaved,
+  onComment,
 }: Props): React.ReactElement {
   const tabs = docTypes ?? [{ type, status: 'not_found' as DocStatus }]
   const [content, setContent] = useState<string | null>(null)
@@ -131,6 +188,43 @@ export function DocumentPane({
   const [copied, setCopied] = useState(false)
   const [fullWidth, setFullWidth] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const readRef = useRef<HTMLDivElement>(null)
+  // Floating "Comment" button shown for a text selection (Word-style inline comment).
+  const [selection, setSelection] = useState<{ quote: string; slug: string; text: string; x: number; y: number } | null>(null)
+
+  // Resolve the section a text selection sits in by finding the nearest heading
+  // above it, then surface a floating Comment button anchored to the selection.
+  function handleTextSelection(): void {
+    if (!onComment || !readRef.current) return
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+      setSelection(null)
+      return
+    }
+    const quote = sel.toString().trim()
+    const range = sel.getRangeAt(0)
+    if (!quote || !readRef.current.contains(range.commonAncestorContainer)) {
+      setSelection(null)
+      return
+    }
+    const rect = range.getBoundingClientRect()
+    let slug = ''
+    let text = 'the document'
+    readRef.current.querySelectorAll<HTMLElement>('[data-slug]').forEach((h) => {
+      if (h.getBoundingClientRect().top <= rect.top + 1) {
+        slug = h.getAttribute('data-slug') ?? ''
+        text = (h.textContent ?? '').trim() || text
+      }
+    })
+    setSelection({ quote, slug, text, x: rect.left + rect.width / 2, y: rect.top })
+  }
+
+  function commentOnSelection(): void {
+    if (!selection || !onComment) return
+    onComment({ slug: selection.slug, text: selection.text, quote: selection.quote })
+    window.getSelection()?.removeAllRanges()
+    setSelection(null)
+  }
 
   useEffect(() => {
     let alive = true
@@ -150,7 +244,7 @@ export function DocumentPane({
   }, [vaultPath, feature, type])
 
   if (content === null) {
-    return <div className="flex-1 grid place-items-center text-sm text-fg/40">Loading…</div>
+    return <div className="flex-1 grid place-items-center text-sm text-faint">Loading…</div>
   }
 
   const editing = view !== 'read'
@@ -227,7 +321,7 @@ export function DocumentPane({
       aria-label={label}
       aria-pressed={view === mode}
       className={`grid place-items-center w-7 h-7 rounded-md transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
-        view === mode ? 'bg-iris text-white shadow-sm' : 'text-fg/50 hover:text-iris-ink hover:bg-surface'
+        view === mode ? 'bg-iris text-white shadow-sm' : 'text-muted hover:text-iris-ink hover:bg-surface'
       }`}
     >
       <Glyph />
@@ -239,7 +333,7 @@ export function DocumentPane({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className="grid place-items-center w-7 h-7 rounded-md text-fg/50 hover:text-iris-ink hover:bg-iris-soft transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
+      className="grid place-items-center w-7 h-7 rounded-md text-muted hover:text-iris-ink hover:bg-iris-soft transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
     >
       {glyph}
     </button>
@@ -266,7 +360,7 @@ export function DocumentPane({
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[12px] capitalize transition-colors motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
                       isActive
                         ? 'bg-surface text-iris-ink shadow-sm font-semibold'
-                        : 'text-fg/50 hover:text-iris-ink font-medium'
+                        : 'text-muted hover:text-iris-ink font-medium'
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${statusDot(t.status)}`} />
@@ -311,7 +405,7 @@ export function DocumentPane({
                 <button
                   onClick={cancel}
                   disabled={saving}
-                  className="text-[12px] font-medium text-fg/60 px-2.5 py-1 rounded-md hover:text-iris-ink hover:bg-iris-soft transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
+                  className="text-[12px] font-medium text-muted px-2.5 py-1 rounded-md hover:text-iris-ink hover:bg-iris-soft transition motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
                 >
                   Cancel
                 </button>
@@ -329,15 +423,33 @@ export function DocumentPane({
       </header>
 
       {view === 'read' && (
-        <div className="flex-1 overflow-y-auto px-6 py-8">
+        <div
+          ref={readRef}
+          className="flex-1 overflow-y-auto px-6 py-8"
+          onMouseUp={handleTextSelection}
+          onMouseDown={() => setSelection(null)}
+          onScroll={() => selection && setSelection(null)}
+        >
           {fullWidth ? (
             <article className="doc mx-auto w-full max-w-none">
-              <Markdown content={content} />
+              <Markdown content={content} onComment={onComment} />
             </article>
           ) : (
             <article className="doc mx-auto w-full max-w-[680px] bg-surface border border-border rounded-xl shadow-panel px-10 py-10">
-              <Markdown content={content} />
+              <Markdown content={content} onComment={onComment} />
             </article>
+          )}
+          {selection && onComment && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={commentOnSelection}
+              style={{ position: 'fixed', left: selection.x, top: selection.y - 10 }}
+              className="z-50 -translate-x-1/2 -translate-y-full flex items-center gap-1.5 rounded-lg bg-iris text-white text-[12px] font-medium px-2.5 py-1.5 shadow-panel hover:bg-iris-ink transition motion-reduce:transition-none focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
+            >
+              <CommentGlyph />
+              Comment
+            </button>
           )}
         </div>
       )}
