@@ -50,52 +50,91 @@ export function CategoryManager({
   }
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/30" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 grid place-items-center bg-fg/40 p-4"
+      onClick={onClose}
+    >
       <div
-        className="w-[420px] max-h-[80vh] overflow-y-auto rounded-xl bg-surface shadow-panel p-5"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Manage categories"
+        className="w-[440px] max-w-full max-h-[80vh] overflow-y-auto rounded-xl border border-border bg-surface shadow-panel p-5"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-[15px] font-semibold text-fg mb-3">Manage categories</h2>
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-[15px] font-semibold text-fg">Manage categories</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="text-fg/40 hover:text-fg text-[13px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
+          >
+            Done
+          </button>
+        </div>
 
-        <ul className="space-y-1.5 mb-4">
+        <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.13em] text-fg/40 mb-2">
+          Categories
+        </p>
+        <ul className="space-y-0.5 mb-5">
           {categories.map((c) => (
-            <li key={c.id} className="flex items-center gap-2.5 text-[13px]">
-              <CategorySwatch color={c.color} />
-              <span className="flex-1 text-fg">{c.name}</span>
-              <span className="text-fg/40 text-[11px]">used by {usage(c.id)}</span>
-              <button onClick={() => void remove(c.id)} className="text-stop/80 hover:text-stop text-[11px]">
+            <li
+              key={c.id}
+              className="group flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] hover:bg-app transition-colors"
+            >
+              <CategorySwatch color={c.color} size={12} />
+              <span className="flex-1 text-fg truncate">{c.name}</span>
+              <span className="text-fg/40 text-[11px] font-mono tabular-nums">used by {usage(c.id)}</span>
+              <button
+                onClick={() => void remove(c.id)}
+                className="text-fg/40 hover:text-stop text-[11px] font-medium rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 transition-colors"
+              >
                 Delete
               </button>
             </li>
           ))}
-          {categories.length === 0 && <li className="text-[12.5px] text-fg/40">No categories yet.</li>}
+          {categories.length === 0 && (
+            <li className="text-[12.5px] text-fg/50 px-2 py-1.5">
+              No categories yet — add your first one below.
+            </li>
+          )}
         </ul>
 
-        <div className="flex items-center gap-2 border-t border-border pt-3">
-          <div className="flex items-center gap-1">
+        <div className="border-t border-border pt-4">
+          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.13em] text-fg/40 mb-2.5">
+            New category
+          </p>
+          <div className="flex items-center gap-1.5 mb-3">
             {CATEGORY_COLORS.map((c) => (
               <button
                 key={c}
                 onClick={() => setColor(c)}
                 aria-label={c}
-                className={`rounded-full p-0.5 ${color === c ? 'ring-2 ring-iris' : ''}`}
+                aria-pressed={color === c}
+                className={`grid place-items-center rounded-full p-0.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
+                  color === c ? 'ring-2 ring-iris ring-offset-1 ring-offset-surface' : 'hover:opacity-80'
+                }`}
               >
-                <CategorySwatch color={c} size={12} />
+                <CategorySwatch color={c} size={14} />
               </button>
             ))}
           </div>
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="New category…"
-            className="flex-1 rounded-md bg-fg/[0.05] text-fg text-[13px] px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-iris/40"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void add()
-            }}
-          />
-          <button onClick={() => void add()} className="text-[12.5px] font-medium text-iris hover:underline">
-            Add
-          </button>
+          <div className="flex items-center gap-2">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="New category…"
+              className="flex-1 rounded-md border border-border bg-app text-fg text-[13px] px-2.5 py-1.5 placeholder:text-fg/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 focus:border-iris/40"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void add()
+              }}
+            />
+            <button
+              onClick={() => void add()}
+              className="rounded-md bg-iris px-3.5 py-1.5 text-[12.5px] font-medium text-white hover:bg-iris-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 focus-visible:ring-offset-1 focus-visible:ring-offset-surface"
+            >
+              Add
+            </button>
+          </div>
         </div>
       </div>
     </div>
