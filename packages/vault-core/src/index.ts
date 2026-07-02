@@ -109,3 +109,13 @@ export { normalizeTicket, type Ticket } from "./ticket.js";
 
 // Migration (legacy features/ layout -> docs-as-vault; docs-as-vault -> index-by-path)
 export { migrateVault, migrateToIndex } from "./migrate.js";
+
+// Audit log (append-only, metadata-only)
+export type { AuditEntry, AuditSource, AuditDecision, ReadAuditOptions } from "./audit.js";
+export {
+  appendAuditEntry, readAuditEntries, auditRelPaths,
+  auditDirPath, auditRelPathFor, actorSlug,
+} from "./audit.js";
+
+// Git identity
+export { resolveGitIdentity } from "./identity.js";

@@ -48,6 +48,9 @@ import {
   publishBranch as corePublishBranch,
   cloneVault as coreCloneVault,
   classifyGitError,
+  auditRelPaths,
+  readAuditEntries,
+  type AuditEntry,
   type VaultInfo,
   type VaultWorkflows,
   type WorkflowConfig,
@@ -150,6 +153,31 @@ async function transact(
     }
   }
   return { pushed: false, reason: lastErr }
+}
+
+/**
+ * Commit any uncommitted session-audit files (audit/*.jsonl) as one batch, using
+ * the existing pull→commit→push transaction. No-op when there are no audit
+ * changes, so we never create empty commits. The syncing user's identity is the
+ * committer; each entry records its own actor.
+ */
+export async function commitAuditLog(vaultPath: string): Promise<void> {
+  const files = await auditRelPaths(vaultPath)
+  if (files.length === 0) return
+  const status = await simpleGit(vaultPath).status()
+  const changed = [
+    ...status.not_added, ...status.created, ...status.modified, ...status.staged,
+  ].some((p) => p.startsWith('audit/'))
+  if (!changed) return
+  await transact(vaultPath, async () => ({
+    files,
+    message: 'chore(audit): sync session audit log',
+  }))
+}
+
+/** Read-only view of the session audit log, optionally filtered to one feature. */
+export async function readAuditLog(vaultPath: string, feature?: string): Promise<AuditEntry[]> {
+  return readAuditEntries(vaultPath, feature ? { feature } : {})
 }
 
 async function resolveVaultAuthor(vaultPath: string): Promise<{ name: string; email: string }> {
@@ -370,6 +398,7 @@ export async function syncVault(vaultPath: string): Promise<void> {
     await pullRebase(vaultPath)
   } finally {
     await importNewProjectDocs(vaultPath).catch(() => {})
+    await commitAuditLog(vaultPath).catch(() => {})
   }
 }
 

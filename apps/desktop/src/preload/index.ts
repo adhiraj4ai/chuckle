@@ -53,6 +53,9 @@ const api: SignoffAPI = {
     getStatus: (vaultPath, feature, type) =>
       ipcRenderer.invoke('document:get-status', { vaultPath, feature, type }),
   },
+  audit: {
+    read: (vaultPath, feature) => ipcRenderer.invoke('audit:read', { vaultPath, feature }),
+  },
   review: {
     action: (vaultPath, feature, type, action, message) =>
       ipcRenderer.invoke('review:action', { vaultPath, feature, type, action, message }),

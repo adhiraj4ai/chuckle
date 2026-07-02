@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { evaluateGate } from "./gate.js";
+import { recordGateDecision } from "./recorder.js";
 import type { PreToolUseEvent } from "./types.js";
 
 async function readStdin(): Promise<string> {
@@ -23,6 +24,12 @@ async function main(): Promise<void> {
   }
 
   const decision = await evaluateGate(event);
+  // Fail-open: audit recording can never change the gate outcome.
+  try {
+    await recordGateDecision(event, decision);
+  } catch {
+    /* swallow — the exit code below is decided solely by decision.allow */
+  }
   if (decision.allow) {
     process.exit(0);
   }

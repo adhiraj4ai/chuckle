@@ -188,3 +188,36 @@
 .doc .hljs-strong {
   font-weight: 600;
 }
+
+/* Audit panel: read-only list of session audit-log entries in the Inspector's
+   Audit tab. Mirrors the muted/bordered visual language used elsewhere in the
+   rail (ReviewPanel, DiscussionRail) rather than introducing new colors. */
+@layer components {
+  .audit-empty {
+    @apply px-4 py-6 text-[12.5px] text-muted leading-relaxed;
+  }
+  .audit-list {
+    @apply flex-1 min-h-0 overflow-y-auto divide-y divide-border-soft;
+  }
+  .audit-row {
+    @apply flex items-center gap-2 px-4 py-2.5 text-[12px];
+  }
+  .audit-time {
+    @apply font-mono text-[11px] text-faint tabular-nums shrink-0;
+  }
+  .audit-actor {
+    @apply font-mono text-[11px] text-muted truncate;
+  }
+  .audit-tool {
+    @apply ml-auto shrink-0 text-[11px] text-fg/70;
+  }
+  .audit-badge {
+    @apply shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide;
+  }
+  .audit-allow {
+    @apply bg-ok-soft text-ok;
+  }
+  .audit-block {
+    @apply bg-stop-soft text-stop;
+  }
+}

@@ -6,9 +6,11 @@ export interface PreToolUseEvent {
     notebook_path?: string;
     [key: string]: unknown;
   };
+  session_id?: string;   // Claude Code sends this on stdin; used to group audit entries
 }
 
 export interface GateDecision {
   allow: boolean;
   reason?: string;
+  feature?: string | null;   // feature the decision pertains to (for audit)
 }

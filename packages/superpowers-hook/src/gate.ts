@@ -67,8 +67,8 @@ export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision
     const planFeature = featureFor("plan");
     if (planFeature) {
       const status = await getApprovalStatus(vaultPath, planFeature, "spec");
-      if (status.status === "approved") return { allow: true };
-      return { allow: false, reason: `🔒 Signoff: plan authoring for "${planFeature}" is gated on spec approval (spec status: ${status.status}).` };
+      if (status.status === "approved") return { allow: true, feature: planFeature };
+      return { allow: false, feature: planFeature, reason: `🔒 Signoff: plan authoring for "${planFeature}" is gated on spec approval (spec status: ${status.status}).` };
     }
 
     // A new plan-classified MARKDOWN file under a doc root with no registration yet → allow authoring
@@ -81,7 +81,7 @@ export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision
       return { allow: false, reason: "🔒 Signoff: no active feature. Submit a spec first before making code changes." };
     }
     const clearance = await isClearedForCode(pointer.vaultPath, pointer.feature);
-    if (clearance.cleared) return { allow: true };
+    if (clearance.cleared) return { allow: true, feature: pointer.feature };
 
     let who = "";
     try {
@@ -90,6 +90,7 @@ export async function evaluateGate(event: PreToolUseEvent): Promise<GateDecision
     } catch { /* decorative only */ }
     return {
       allow: false,
+      feature: pointer.feature,
       reason: `🔒 Signoff: code changes are gated.\nFeature "${pointer.feature}" (${clearance.tier}) — ${clearance.artifact} status: ${clearance.status}.${who}`,
     };
   } catch (err) {
