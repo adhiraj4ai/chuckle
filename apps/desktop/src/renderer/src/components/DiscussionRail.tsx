@@ -313,7 +313,9 @@ export function DiscussionRail({ vaultPath, feature, type, markdown, openRequest
     }
     requestAnimationFrame(() => {
       const el = scrollRef.current?.querySelector(`[data-section="${openRequest.slug}"]`)
-      el?.scrollIntoView({ block: 'nearest' })
+      if (el instanceof HTMLElement && typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ block: 'nearest' })
+      }
       const ta = textareaRef.current
       if (ta) {
         ta.focus()
@@ -390,23 +392,27 @@ export function DiscussionRail({ vaultPath, feature, type, markdown, openRequest
           </p>
         ) : !hasAnyThreads ? (
           <p className="text-[12.5px] text-muted leading-relaxed">
-            No comments yet. Pick a section below and leave the first note.
+            No comments yet. Hover a heading in the document — or select some text — to add the first one.
           </p>
         ) : null}
 
-        {headings.map((h) => (
-          <ThreadGroup
-            key={h.slug}
-            heading={h}
-            threads={bySection.get(h.slug) ?? []}
-            isActiveAnchor={effectiveAnchor === h.slug}
-            onAnchor={() => setAnchorSlug(h.slug)}
-            vaultPath={vaultPath}
-            feature={feature}
-            type={type}
-            onRefresh={handleRefresh}
-          />
-        ))}
+        {/* Show only sections that actually have comments (commenting starts from
+            the document itself), newest-anchored sections in document order. */}
+        {headings
+          .filter((h) => (bySection.get(h.slug)?.length ?? 0) > 0)
+          .map((h) => (
+            <ThreadGroup
+              key={h.slug}
+              heading={h}
+              threads={bySection.get(h.slug) ?? []}
+              isActiveAnchor={effectiveAnchor === h.slug}
+              onAnchor={() => setAnchorSlug(h.slug)}
+              vaultPath={vaultPath}
+              feature={feature}
+              type={type}
+              onRefresh={handleRefresh}
+            />
+          ))}
 
         {generalThreads.length > 0 && (
           <ThreadGroup

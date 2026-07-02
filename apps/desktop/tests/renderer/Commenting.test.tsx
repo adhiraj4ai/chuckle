@@ -33,7 +33,9 @@ describe('DiscussionRail — inline comment request', () => {
     const { rerender } = render(
       <DiscussionRail vaultPath="/v" feature="f" type="spec" markdown={md} openRequest={null} />,
     )
-    await screen.findByRole('heading', { level: 3, name: 'Goals' })
+    // With no comments yet, no section is listed; the composer still shows,
+    // anchored to the first heading by default.
+    await screen.findByPlaceholderText(/add a comment on/i)
 
     rerender(
       <DiscussionRail

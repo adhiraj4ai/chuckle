@@ -61,14 +61,15 @@ describe('SelectedDocument stale-response race', () => {
 
     // Open the Discussion panel: it renders the markdown owned by
     // SelectedDocument's read effect (the one with the stale-response guard).
-    // DiscussionRail derives section headings (rendered as <h3>) from it.
+    // The composer anchors to the document's first heading, so its placeholder
+    // reflects which markdown won.
     fireEvent.click(screen.getByRole('button', { name: /discussion/i }))
 
-    // The discussion section must reflect the NEWER selection; the stale older
-    // response must not overwrite it (SelectedDocument's `alive` guard).
+    // The discussion must reflect the NEWER selection; the stale older response
+    // must not overwrite it (SelectedDocument's `alive` guard).
     await waitFor(() =>
-      expect(screen.getByRole('heading', { level: 3, name: 'New Heading' })).toBeInTheDocument()
+      expect(screen.getByPlaceholderText(/add a comment on new heading/i)).toBeInTheDocument()
     )
-    expect(screen.queryByRole('heading', { level: 3, name: 'Old Heading' })).not.toBeInTheDocument()
+    expect(screen.queryByPlaceholderText(/add a comment on old heading/i)).not.toBeInTheDocument()
   })
 })
