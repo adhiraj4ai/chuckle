@@ -24,23 +24,28 @@ const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 /**
  * Bundled-tools source directory.
  *
- * Resolution order: `SIGNOFF_TOOLS_DIR` (test/override seam, always set under
- * Vitest) → packaged app resources (`process.resourcesPath/tools`, populated by
- * electron-builder's `extraResources`) → dev repo path (`resources/tools`,
- * populated by `npm run bundle:tools`).
+ * Resolution order:
+ * 1. `SIGNOFF_TOOLS_DIR` (test/override seam, always set under Vitest)
+ * 2. Dev mode (ELECTRON_RENDERER_URL set by electron-vite dev) → repo `resources/tools`
+ *    (Note: process.resourcesPath is also set in dev, pointing at Electron's own resources
+ *    which lack a `tools/` dir, so we check ELECTRON_RENDERER_URL first)
+ * 3. Packaged app (`process.resourcesPath/tools`, populated by electron-builder's `extraResources`)
+ * 4. Fallback (plain Node, no Electron) → repo path
  *
  * We deliberately avoid importing `electron` here: this module runs under plain
  * Node in tests (no electron binary present) and the `SIGNOFF_TOOLS_DIR` seam
  * already makes the packaged/dev branches unreachable in that environment.
- * `process.resourcesPath` is only ever set inside an Electron process, so
- * checking it directly is sufficient to detect "packaged" without touching the
- * electron module at all.
  */
 export function toolsSourceDir(): string {
+  // 1. Explicit override (tests, advanced setups).
   if (process.env.SIGNOFF_TOOLS_DIR) return process.env.SIGNOFF_TOOLS_DIR;
+  // 2. Dev: electron-vite dev sets ELECTRON_RENDERER_URL — use the repo's bundled tools,
+  //    NOT process.resourcesPath (which points at Electron's own resources in dev).
+  if (process.env.ELECTRON_RENDERER_URL) return path.resolve(moduleDir, "..", "..", "resources", "tools");
+  // 3. Packaged: electron-builder extraResources → process.resourcesPath/tools
   const resourcesPath = (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath;
   if (resourcesPath) return path.join(resourcesPath, "tools");
-  // dev: src/main/installer.ts (compiled to out/main/installer.js) → apps/desktop/resources/tools
+  // 4. Fallback (plain node, no electron): repo path.
   return path.resolve(moduleDir, "..", "..", "resources", "tools");
 }
 

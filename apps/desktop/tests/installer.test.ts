@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import os from "node:os"; import path from "node:path"; import fs from "node:fs/promises";
-import { applyInstall, removeInstall, installStatus, installedToolsDir } from "../src/main/installer.js";
+import { applyInstall, removeInstall, installStatus, installedToolsDir, toolsSourceDir } from "../src/main/installer.js";
 
 let tmp: string, project: string, home: string, toolsSrc: string;
 beforeEach(async () => {
@@ -19,6 +19,23 @@ afterEach(async () => { delete process.env.SIGNOFF_HOME; delete process.env.SIGN
 
 const vaultPath = () => path.join(project, ".signoff");
 const settings = async () => JSON.parse(await fs.readFile(path.join(project, ".claude", "settings.json"), "utf-8"));
+
+describe("toolsSourceDir", () => {
+  it("toolsSourceDir uses the repo resources dir in dev (ELECTRON_RENDERER_URL set, no override)", () => {
+    const prevTools = process.env.SIGNOFF_TOOLS_DIR;
+    const prevRenderer = process.env.ELECTRON_RENDERER_URL;
+    delete process.env.SIGNOFF_TOOLS_DIR;
+    process.env.ELECTRON_RENDERER_URL = "http://localhost:5173";
+    try {
+      expect(toolsSourceDir().replace(/\\/g, "/")).toMatch(/apps\/desktop\/resources\/tools$/);
+    } finally {
+      if (prevTools === undefined) delete process.env.SIGNOFF_TOOLS_DIR;
+      else process.env.SIGNOFF_TOOLS_DIR = prevTools;
+      if (prevRenderer === undefined) delete process.env.ELECTRON_RENDERER_URL;
+      else process.env.ELECTRON_RENDERER_URL = prevRenderer;
+    }
+  });
+});
 
 describe("applyInstall", () => {
   it("gate: copies tools to ~/.signoff/tools and writes node-based settings", async () => {
