@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { DetailsPanel } from '@renderer/components/DetailsPanel'
 import type { Category, FeatureEntry } from '@shared/ipc-types'
 
-const feature: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null }
+const feature: FeatureEntry = { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} }
 const backend: Category = { id: 'backend', name: 'Backend', color: 'blue' }
 const frontend: Category = { id: 'frontend', name: 'Frontend', color: 'green' }
 

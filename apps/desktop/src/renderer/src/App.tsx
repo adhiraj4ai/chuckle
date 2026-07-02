@@ -159,11 +159,12 @@ export function App(): React.ReactElement {
   // "New until opened" tracking for sidebar features.
   const { isNew, markSeen } = useSeenFeatures(vaultPath, state?.features.map((f) => f.name) ?? [])
   const onSelectFeature = useCallback(
-    (feature: string) => {
+    (feature: string, type?: DocumentType) => {
       markSeen(feature)
       selectFeature(feature)
+      if (type) selectType(type)
     },
-    [markSeen, selectFeature]
+    [markSeen, selectFeature, selectType]
   )
 
   // Single in-flight guard: syncNow, the auto-sync tick, and any other sync

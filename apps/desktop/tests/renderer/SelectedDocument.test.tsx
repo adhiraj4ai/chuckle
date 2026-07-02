@@ -13,7 +13,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
 const docTypes: { type: DocumentType; status: 'pending' }[] = [{ type: 'spec', status: 'pending' }]
 
 const entry = (name: string): FeatureEntry => ({
-  name, spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null,
+  name, spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {},
 })
 
 beforeEach(() => {

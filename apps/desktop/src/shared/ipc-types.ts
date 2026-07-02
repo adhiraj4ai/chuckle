@@ -75,6 +75,9 @@ export interface FeatureEntry {
   tags: string[]
   tier: Tier
   ticket: Ticket | null
+  /** Project-relative path per doc type (from the manifest), `/`-separated.
+   *  Absent for a type the feature does not have. */
+  paths: { spec?: string; plan?: string; adr?: string }
 }
 
 /** Result of creating/opening a vault: the vault's display name and the

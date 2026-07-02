@@ -394,6 +394,11 @@ export async function listFeatures(vaultPath: string): Promise<FeatureEntry[]> {
       tags: docs?.tags ?? [],
       tier: normalizeTier(docs?.tier),
       ticket: docs?.ticket ?? null,
+      paths: {
+        ...(docs?.spec ? { spec: docs.spec } : {}),
+        ...(docs?.plan ? { plan: docs.plan } : {}),
+        ...(docs?.adr ? { adr: docs.adr } : {}),
+      },
     })
   }
   return results

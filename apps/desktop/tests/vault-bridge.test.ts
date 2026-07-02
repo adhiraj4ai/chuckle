@@ -157,6 +157,18 @@ describe('listFeatures', () => {
     expect(result[0].spec).toBe('pending')
     expect(result[0].plan).toBe('not_found')
   })
+
+  it('populates paths with the manifest-relative path for each present doc type', async () => {
+    await seedDoc('user-auth', 'spec')
+    await seedDoc('user-auth', 'plan')
+    const result = await listFeatures(vaultPath)
+    const f = result.find((x) => x.name === 'user-auth')!
+    // seedDoc writes docs/<type>s/<feature>.md
+    expect(f.paths.spec).toBe('docs/specs/user-auth.md')
+    expect(f.paths.plan).toBe('docs/plans/user-auth.md')
+    // no adr was seeded → absent
+    expect(f.paths.adr).toBeUndefined()
+  })
 })
 
 describe('syncVault picks up newly added documents', () => {

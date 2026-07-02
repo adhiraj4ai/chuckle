@@ -3,18 +3,25 @@ import type { FeatureEntry, ApprovalStatus, Category } from '@shared/ipc-types'
 import { Logo } from './Logo.js'
 import { humanizeFeature } from '../lib/feature.js'
 import { CategorySwatch } from './CategorySwatch.js'
-import { groupByCategory, matchesTagFilter, allTags } from '../lib/grouping.js'
+import { DocTypeIcon } from './DocTypeIcon.js'
+import {
+  groupByCategory,
+  groupByFolder,
+  matchesTagFilter,
+  allTags,
+  statusLabel,
+  type DocType,
+  type Status,
+} from '../lib/grouping.js'
 
-type DocType = 'spec' | 'plan' | 'adr'
-type Status = ApprovalStatus | 'not_found'
-type GroupBy = 'feature' | 'status' | 'category'
+type GroupBy = 'status' | 'category' | 'folder'
 type StatusFilter = ApprovalStatus | 'all'
 
 interface Props {
   vaultName: string
   features: FeatureEntry[]
   selected: { feature: string } | null
-  onSelect: (feature: string) => void
+  onSelect: (feature: string, type?: DocType) => void
   onSync: () => void
   onSwitchVault?: () => void
   /** True for features that arrived since the vault was last seen and haven't been opened. */
@@ -25,14 +32,6 @@ interface Props {
   categories?: Category[]
 }
 
-function statusLabel(status: Status): string {
-  if (status === 'pending') return 'Pending'
-  if (status === 'in_review') return 'In review'
-  if (status === 'approved') return 'Approved'
-  if (status === 'rejected') return 'Changes requested'
-  return 'Open'
-}
-
 /** Solid dot color for a status (used in filter chips + group headers). */
 function statusDot(status: Status): string {
   if (status === 'pending') return 'bg-wait/60'
@@ -40,15 +39,6 @@ function statusDot(status: Status): string {
   if (status === 'approved') return 'bg-ok'
   if (status === 'rejected') return 'bg-stop'
   return 'bg-railfg/30'
-}
-
-/** Tinted badge classes for a per-document status pill on a feature row. */
-function statusTint(status: Status): string {
-  if (status === 'pending') return 'bg-wait/15 text-wait'
-  if (status === 'in_review') return 'bg-wait/25 text-wait'
-  if (status === 'approved') return 'bg-ok/20 text-ok'
-  if (status === 'rejected') return 'bg-stop/20 text-stop'
-  return 'bg-railfg/10 text-railfg/40'
 }
 
 const STATUS_ORDER: ApprovalStatus[] = ['rejected', 'in_review', 'pending', 'approved', 'not_found']
@@ -78,15 +68,6 @@ function primaryStatus(f: FeatureEntry): ApprovalStatus {
   return 'not_found'
 }
 
-function FeatureGlyph(): React.ReactElement {
-  return (
-    <svg viewBox="0 0 16 16" className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.25">
-      <path d="M2.5 5l5.5-2.5L13.5 5 8 7.5 2.5 5z" strokeLinejoin="round" />
-      <path d="M2.5 8L8 10.5 13.5 8M2.5 11L8 13.5 13.5 11" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
 export function Sidebar({
   vaultName,
   features,
@@ -98,10 +79,35 @@ export function Sidebar({
   onManageCategories,
   categories,
 }: Props): React.ReactElement {
-  const [groupBy, setGroupBy] = useState<GroupBy>('feature')
+  const [groupBy, setGroupBy] = useState<GroupBy>('status')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
   const [activeTags, setActiveTags] = useState<string[]>([])
+
+  // Per-vault collapsed folder set; folders default to expanded. Persisted so a
+  // reviewer's collapsed sections survive reloads and vault switches.
+  const collapsedKey = `signoff.folders.collapsed.${vaultName}`
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(collapsedKey)
+      return new Set<string>(raw ? (JSON.parse(raw) as string[]) : [])
+    } catch {
+      return new Set<string>()
+    }
+  })
+  const toggleFolder = (folder: string): void => {
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev)
+      if (next.has(folder)) next.delete(folder)
+      else next.add(folder)
+      try {
+        localStorage.setItem(collapsedKey, JSON.stringify([...next]))
+      } catch {
+        /* localStorage unavailable — keep in-memory state */
+      }
+      return next
+    })
+  }
 
   const counts: Record<StatusFilter, number> = {
     all: features.length,
@@ -144,9 +150,6 @@ export function Sidebar({
         }`}
       >
         {isSelected && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-iris" />}
-        <span className={isSelected ? 'text-iris' : 'text-railfg/40'}>
-          <FeatureGlyph />
-        </span>
         <span className={`truncate flex-1 text-left ${fresh && !isSelected ? 'font-semibold text-railfg/95' : ''}`}>
           {humanizeFeature(f.name)}
         </span>
@@ -184,14 +187,32 @@ export function Sidebar({
         )}
         <span className="flex items-center gap-1 shrink-0">
           {types.map((t) => (
-            <span
-              key={t}
-              title={`${t} — ${statusLabel(f[t])}`}
-              className={`w-4 h-4 grid place-items-center rounded text-[9px] font-bold leading-none ${statusTint(f[t])}`}
-            >
-              {t.charAt(0).toUpperCase()}
-            </span>
+            <DocTypeIcon key={t} type={t} status={f[t]} />
           ))}
+        </span>
+      </button>
+    )
+  }
+
+  /** A single document row in folder mode — selects the exact (feature, type). */
+  function docRow(f: FeatureEntry, type: DocType, status: Status): React.ReactElement {
+    const isSelected = selected?.feature === f.name
+    return (
+      <button
+        key={`${f.name}:${type}`}
+        onClick={() => onSelect(f.name, type)}
+        aria-label={`${f.name} ${type}`}
+        title={`${humanizeFeature(f.name)} — ${type}`}
+        className={`group relative w-full flex items-center gap-2.5 pl-3 pr-2 py-2 rounded-md text-[13px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 ${
+          isSelected
+            ? 'bg-iris/[0.14] text-railfg'
+            : 'text-railfg/65 hover:bg-railfg/[0.06] hover:text-railfg/90'
+        }`}
+      >
+        {isSelected && <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full bg-iris" />}
+        <span className="truncate flex-1 text-left">{humanizeFeature(f.name)}</span>
+        <span className="shrink-0">
+          <DocTypeIcon type={type} status={status} />
         </span>
       </button>
     )
@@ -305,14 +326,14 @@ export function Sidebar({
               Arrange by
             </span>
             <div className="flex items-center gap-1 bg-railfg/[0.06] p-1 rounded-lg">
-              <button onClick={() => setGroupBy('feature')} className={tabClass(groupBy === 'feature')}>
-                Feature
-              </button>
               <button onClick={() => setGroupBy('status')} className={tabClass(groupBy === 'status')}>
                 Status
               </button>
               <button onClick={() => setGroupBy('category')} className={tabClass(groupBy === 'category')}>
                 Category
+              </button>
+              <button onClick={() => setGroupBy('folder')} className={tabClass(groupBy === 'folder')}>
+                Folder
               </button>
             </div>
           </div>
@@ -376,8 +397,6 @@ export function Sidebar({
           </p>
         )}
 
-        {groupBy === 'feature' && filtered.map((f) => featureRow(f))}
-
         {groupBy === 'status' &&
           STATUS_ORDER.map((s) => {
             const group = filtered.filter((f) => primaryStatus(f) === s)
@@ -409,6 +428,33 @@ export function Sidebar({
               {g.features.map((f) => featureRow(f))}
             </div>
           ))}
+
+        {groupBy === 'folder' &&
+          groupByFolder(filtered).map((g) => {
+            const collapsed = collapsedFolders.has(g.folder)
+            return (
+              <div key={g.folder} className="mb-3">
+                <button
+                  onClick={() => toggleFolder(g.folder)}
+                  aria-expanded={!collapsed}
+                  className="w-full flex items-center gap-1.5 font-mono text-[10.5px] font-semibold tracking-wide text-railfg/40 hover:text-railfg/70 px-3 mb-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40 rounded"
+                >
+                  <svg
+                    viewBox="0 0 12 12"
+                    className={`w-2.5 h-2.5 shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
+                    <path d="M3 4.5l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="truncate">{g.folder}</span>
+                  <span className="ml-1 text-railfg/25 tracking-normal">{g.docs.length}</span>
+                </button>
+                {!collapsed && g.docs.map((d) => docRow(d.feature, d.type, d.status))}
+              </div>
+            )
+          })}
       </nav>
 
       <footer className="border-t border-railfg/[0.08]">

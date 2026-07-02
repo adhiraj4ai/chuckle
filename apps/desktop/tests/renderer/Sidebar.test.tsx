@@ -4,8 +4,8 @@ import { Sidebar } from '@renderer/components/Sidebar'
 import type { FeatureEntry } from '@shared/ipc-types'
 
 const features: FeatureEntry[] = [
-  { name: 'user-auth', spec: 'pending', plan: 'approved', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null },
-  { name: 'payment-gw', spec: 'rejected', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null },
+  { name: 'user-auth', spec: 'pending', plan: 'approved', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
+  { name: 'payment-gw', spec: 'rejected', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
 ]
 
 describe('Sidebar', () => {
@@ -21,7 +21,7 @@ describe('Sidebar', () => {
   })
 
   it('uppercases known acronyms when humanizing', () => {
-    render(<Sidebar vaultName="vault" features={[{ name: 'mcp-server', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null }]} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    render(<Sidebar vaultName="vault" features={[{ name: 'mcp-server', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} }]} selected={null} onSelect={() => {}} onSync={() => {}} />)
     expect(screen.getByText('MCP Server')).toBeInTheDocument()
   })
 
@@ -49,12 +49,14 @@ describe('Sidebar', () => {
 
   it('surfaces in_review docs via the In review filter chip and tints them', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'in_review', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null },
-      { name: 'payment-gw', spec: 'approved', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null },
+      { name: 'user-auth', spec: 'in_review', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
+      { name: 'payment-gw', spec: 'approved', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
-    // The In review chip exists with a count of 1
-    const chip = screen.getByText('In review')
+    // The In review filter chip exists with a count of 1. Scope to the button
+    // role: in the default Status arrangement "In review" also appears as a
+    // group header, so a bare text query would be ambiguous.
+    const chip = screen.getByRole('button', { name: /In review/ })
     expect(chip).toBeInTheDocument()
     // The S badge for the in_review doc is NOT the neutral fallback — carries the wait/amber tint
     const badge = screen.getByTitle('spec — In review')
@@ -76,8 +78,8 @@ describe('Sidebar', () => {
 
   it('renders a category group and an Uncategorized group when arranging by category', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: { id: 'backend', name: 'Backend', color: 'blue' }, tags: [], tier: 'standard', ticket: null },
-      { name: 'payment-gw', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null },
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: { id: 'backend', name: 'Backend', color: 'blue' }, tags: [], tier: 'standard', ticket: null, paths: {} },
+      { name: 'payment-gw', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     fireEvent.click(screen.getByText('Category'))
@@ -87,8 +89,8 @@ describe('Sidebar', () => {
 
   it('filters by a tag chip (AND with other filters)', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: ['security'], tier: 'standard', ticket: null },
-      { name: 'payment-gw', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null },
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: ['security'], tier: 'standard', ticket: null, paths: {} },
+      { name: 'payment-gw', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     fireEvent.click(screen.getByText(/#security/))
@@ -112,9 +114,9 @@ describe('Sidebar', () => {
 
   it('renders a tier badge for light/heavy features but not for standard', () => {
     const fs: FeatureEntry[] = [
-      { name: 'light-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'light', ticket: null },
-      { name: 'heavy-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'heavy', ticket: null },
-      { name: 'standard-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null },
+      { name: 'light-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'light', ticket: null, paths: {} },
+      { name: 'heavy-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'heavy', ticket: null, paths: {} },
+      { name: 'standard-feature', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     const lightRow = screen.getByLabelText('light-feature')
@@ -127,10 +129,42 @@ describe('Sidebar', () => {
 
   it('shows an A pill for a feature with an ADR', () => {
     const fs: FeatureEntry[] = [
-      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'approved', category: null, tags: [], tier: 'standard', ticket: null },
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'approved', category: null, tags: [], tier: 'standard', ticket: null, paths: {} },
     ]
     render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
     expect(screen.getByTitle('adr — Approved')).toBeInTheDocument()
+  })
+
+  it('renders collapsible folder groups and toggles rows in folder mode', () => {
+    const fs: FeatureEntry[] = [
+      { name: 'user-auth', spec: 'pending', plan: 'approved', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: { spec: 'docs/specs/user-auth.md', plan: 'docs/plans/user-auth.md' } },
+    ]
+    render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={() => {}} onSync={() => {}} />)
+    fireEvent.click(screen.getByText('Folder'))
+    // both folder headers appear
+    const specsHeader = screen.getByRole('button', { name: /specs/ })
+    expect(screen.getByRole('button', { name: /plans/ })).toBeInTheDocument()
+    // the spec doc row is visible (aria-label "user-auth spec")
+    expect(screen.getByLabelText('user-auth spec')).toBeInTheDocument()
+    // collapsing the specs header hides its row
+    fireEvent.click(specsHeader)
+    expect(screen.queryByLabelText('user-auth spec')).not.toBeInTheDocument()
+    // the plans row is still visible
+    expect(screen.getByLabelText('user-auth plan')).toBeInTheDocument()
+    // re-expanding shows it again
+    fireEvent.click(specsHeader)
+    expect(screen.getByLabelText('user-auth spec')).toBeInTheDocument()
+  })
+
+  it('fires onSelect(feature, type) when a folder-mode doc row is clicked', () => {
+    const onSelect = vi.fn()
+    const fs: FeatureEntry[] = [
+      { name: 'user-auth', spec: 'pending', plan: 'not_found', adr: 'not_found', category: null, tags: [], tier: 'standard', ticket: null, paths: { spec: 'docs/specs/user-auth.md' } },
+    ]
+    render(<Sidebar vaultName="vault" features={fs} selected={null} onSelect={onSelect} onSync={() => {}} />)
+    fireEvent.click(screen.getByText('Folder'))
+    fireEvent.click(screen.getByLabelText('user-auth spec'))
+    expect(onSelect).toHaveBeenCalledWith('user-auth', 'spec')
   })
 
   it('marks features reported as new with a "New" indicator and leaves others unmarked', () => {
