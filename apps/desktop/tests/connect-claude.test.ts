@@ -6,17 +6,18 @@ import fs from 'node:fs/promises'
 
 const VAULT = '/home/me/project/.signoff'
 const MATCHER = 'Write|Edit|MultiEdit|NotebookEdit'
+const npxOpts = { mcpCommand: 'npx', mcpArgs: ['-y', '@signoff/mcp-server', '--vault', VAULT], hookCommand: 'npx -y @signoff/superpowers-hook' }
 
 describe('mergeSignoffSettings', () => {
   it('adds the signoff MCP server pointed at the vault', () => {
-    const out = mergeSignoffSettings({}, VAULT)
+    const out = mergeSignoffSettings({}, npxOpts)
     const server = out.mcpServers?.signoff as { command: string; args: string[] }
     expect(server.command).toBe('npx')
     expect(server.args).toEqual(['-y', '@signoff/mcp-server', '--vault', VAULT])
   })
 
   it('adds a PreToolUse hook matching the structured edit tools', () => {
-    const out = mergeSignoffSettings({}, VAULT)
+    const out = mergeSignoffSettings({}, npxOpts)
     const entry = out.hooks?.PreToolUse?.[0]
     expect(entry?.matcher).toBe(MATCHER)
     expect(entry?.hooks[0].command).toContain('@signoff/superpowers-hook')
@@ -28,7 +29,7 @@ describe('mergeSignoffSettings', () => {
       mcpServers: { other: { command: 'foo' } },
       hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [{ type: 'command', command: 'lint' }] }] },
     }
-    const out = mergeSignoffSettings(existing, VAULT)
+    const out = mergeSignoffSettings(existing, npxOpts)
     expect(out.model).toBe('opus')
     expect(out.mcpServers?.other).toEqual({ command: 'foo' })
     // the unrelated Bash hook survives; signoff hook is added alongside it
@@ -38,8 +39,8 @@ describe('mergeSignoffSettings', () => {
   })
 
   it('is idempotent — running twice yields one signoff hook entry', () => {
-    const once = mergeSignoffSettings({}, VAULT)
-    const twice = mergeSignoffSettings(once, VAULT)
+    const once = mergeSignoffSettings({}, npxOpts)
+    const twice = mergeSignoffSettings(once, npxOpts)
     const signoffHooks = twice.hooks!.PreToolUse!.filter((e) =>
       e.hooks.some((h) => h.command.includes('@signoff/superpowers-hook'))
     )
