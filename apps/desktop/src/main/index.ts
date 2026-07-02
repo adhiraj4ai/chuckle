@@ -44,6 +44,11 @@ import {
   setFeatureTicketBridge,
 } from './vault-bridge.js'
 import {
+  applyInstall,
+  removeInstall,
+  installStatus,
+} from './installer.js'
+import {
   isAllowedExternalUrl,
   isAllowedNavigation,
   contentSecurityPolicy,
@@ -151,6 +156,9 @@ function registerIpcHandlers(): void {
   ipcMain.handle('vault:clone', (_e, { url, destDir }) => cloneVault(url, destDir))
   ipcMain.handle('vault:sync-state', (_e, { vaultPath }) => getSyncStateBridge(vaultPath))
   ipcMain.handle('vault:connect-claude', (_e, { vaultPath }) => connectClaudeCode(vaultPath))
+  ipcMain.handle('install:status', (_e, { vaultPath }) => installStatus(dirname(vaultPath)))
+  ipcMain.handle('install:apply', (_e, { vaultPath, components }) => applyInstall(dirname(vaultPath), vaultPath, components))
+  ipcMain.handle('install:remove', (_e, { vaultPath, components }) => removeInstall(dirname(vaultPath), components))
 }
 
 app.whenReady().then(() => {

@@ -16,9 +16,9 @@ const HOOK_MATCHER = 'Write|Edit|MultiEdit|NotebookEdit'
 const MCP_PACKAGE = '@signoff/mcp-server'
 const HOOK_PACKAGE = '@signoff/superpowers-hook'
 
-/** True for any PreToolUse entry that runs the SignOff gate. */
-function isSignoffEntry(entry: PreToolUseEntry): boolean {
-  return entry.hooks?.some((h) => typeof h.command === 'string' && h.command.includes(HOOK_PACKAGE))
+/** Matches any PreToolUse entry that runs the SignOff gate (node bundle or legacy npx). */
+function isSignoffHook(entry: PreToolUseEntry): boolean {
+  return entry.hooks?.some((h) => typeof h.command === 'string' && /signoff-gate|@signoff\/superpowers-hook/.test(h.command))
 }
 
 /**
@@ -26,20 +26,43 @@ function isSignoffEntry(entry: PreToolUseEntry): boolean {
  * settings object without clobbering unrelated keys. Idempotent: re-running
  * replaces the single `signoff` server and the single SignOff hook entry.
  */
-export function mergeSignoffSettings(existing: ClaudeSettings, vaultPath: string): ClaudeSettings {
+export function mergeSignoffSettings(
+  existing: ClaudeSettings,
+  opts: { mcpCommand: string; mcpArgs: string[]; hookCommand: string }
+): ClaudeSettings {
   const mcpServers = { ...(existing.mcpServers ?? {}) }
-  mcpServers.signoff = { command: 'npx', args: ['-y', MCP_PACKAGE, '--vault', vaultPath] }
+  mcpServers.signoff = { command: opts.mcpCommand, args: opts.mcpArgs }
 
   const hooks = { ...(existing.hooks ?? {}) }
   const existingPre = Array.isArray(hooks.PreToolUse) ? hooks.PreToolUse : []
-  const preserved = existingPre.filter((e) => !isSignoffEntry(e))
-  preserved.push({
-    matcher: HOOK_MATCHER,
-    hooks: [{ type: 'command', command: `npx -y ${HOOK_PACKAGE}` }],
-  })
+  const preserved = existingPre.filter((e) => !isSignoffHook(e))
+  preserved.push({ matcher: HOOK_MATCHER, hooks: [{ type: 'command', command: opts.hookCommand }] })
   hooks.PreToolUse = preserved
 
   return { ...existing, mcpServers, hooks }
+}
+
+/**
+ * Strip SignOff's MCP server + PreToolUse hook entry from an existing Claude
+ * Code settings object, leaving unrelated keys untouched. Drops the
+ * `mcpServers`/`hooks` containers entirely if they become empty.
+ */
+export function removeSignoffSettings(existing: ClaudeSettings): ClaudeSettings {
+  const next: ClaudeSettings = { ...existing }
+  if (next.mcpServers) {
+    const { signoff, ...rest } = next.mcpServers as Record<string, unknown>
+    next.mcpServers = rest
+    if (Object.keys(rest).length === 0) delete next.mcpServers
+  }
+  if (next.hooks?.PreToolUse) {
+    const kept = next.hooks.PreToolUse.filter((e) => !isSignoffHook(e))
+    const hooks = { ...next.hooks }
+    if (kept.length) hooks.PreToolUse = kept
+    else delete hooks.PreToolUse
+    next.hooks = Object.keys(hooks).length ? hooks : undefined
+    if (next.hooks === undefined) delete next.hooks
+  }
+  return next
 }
 
 /**
@@ -60,7 +83,8 @@ export async function connectClaudeCode(vaultPath: string): Promise<{ settingsPa
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
   }
 
-  const merged = mergeSignoffSettings(existing, vaultPath)
+  // interim (Task 4 replaces this with the installer):
+  const merged = mergeSignoffSettings(existing, { mcpCommand: 'npx', mcpArgs: ['-y', MCP_PACKAGE, '--vault', vaultPath], hookCommand: `npx -y ${HOOK_PACKAGE}` })
   await writeFileAtomic(settingsPath, JSON.stringify(merged, null, 2) + '\n')
   return { settingsPath }
 }

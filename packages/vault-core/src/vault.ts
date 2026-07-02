@@ -48,7 +48,7 @@ const DEFAULT_WORKFLOWS = {
   },
 };
 
-function signoffHome(): string {
+export function signoffHome(): string {
   return process.env.SIGNOFF_HOME ?? path.join(os.homedir(), ".signoff");
 }
 

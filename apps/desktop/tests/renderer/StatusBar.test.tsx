@@ -84,15 +84,21 @@ describe('StatusBar consolidated git cluster', () => {
     await waitFor(() => expect(screen.getByText('Connect repo')).toBeInTheDocument())
   })
 
-  it('connects to Claude Code from the vault popover and reports the written path', async () => {
+  it('opens the install panel from the vault popover via "Set up Claude Code"', async () => {
     vi.mocked(window.signoff.vault.syncState).mockResolvedValue({ branch: 'main', hasRemote: false, hasUpstream: false, ahead: 0, behind: 0 })
-    vi.mocked(window.signoff.vault.connectClaude).mockResolvedValue({ settingsPath: '/v/.claude/settings.json' })
+    vi.mocked(window.signoff.install.status).mockResolvedValue({
+      gate: 'not_installed',
+      skill: 'not_installed',
+      installedVersion: null,
+      appVersion: '0.2.0',
+      nodeAvailable: true,
+    })
     renderBar()
     // open the vault popover
     fireEvent.click(screen.getByText('My Vault'))
-    const btn = await screen.findByRole('button', { name: /connect to claude code/i })
+    const btn = await screen.findByRole('button', { name: /set up claude code/i })
     fireEvent.click(btn)
-    await waitFor(() => expect(window.signoff.vault.connectClaude).toHaveBeenCalledWith('/v'))
-    await waitFor(() => expect(screen.getByText(/\.claude\/settings\.json/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByRole('dialog', { name: /set up claude code/i })).toBeInTheDocument())
+    await waitFor(() => expect(window.signoff.install.status).toHaveBeenCalledWith('/v'))
   })
 })

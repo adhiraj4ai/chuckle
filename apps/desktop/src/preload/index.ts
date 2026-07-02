@@ -75,6 +75,11 @@ const api: SignoffAPI = {
     read: (vaultPath) => ipcRenderer.invoke('workflows:read', { vaultPath }),
     write: (vaultPath, workflows) => ipcRenderer.invoke('workflows:write', { vaultPath, workflows }),
   },
+  install: {
+    status: (vaultPath) => ipcRenderer.invoke('install:status', { vaultPath }),
+    apply: (vaultPath, components) => ipcRenderer.invoke('install:apply', { vaultPath, components }),
+    remove: (vaultPath, components) => ipcRenderer.invoke('install:remove', { vaultPath, components }),
+  },
   openExternal: (url) => ipcRenderer.invoke('app:open-external', { url }),
 }
 

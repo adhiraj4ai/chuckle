@@ -102,7 +102,7 @@ export {
 export type { GitErrorKind, SyncState } from "./git.js";
 
 // VaultManager
-export { VaultManager } from "./vault.js";
+export { VaultManager, signoffHome } from "./vault.js";
 
 // Ticket
 export { normalizeTicket, type Ticket } from "./ticket.js";

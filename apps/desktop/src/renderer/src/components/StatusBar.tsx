@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import type { SyncState } from '@shared/ipc-types'
 import { AUTO_SYNC_OPTIONS } from '../hooks/useAutoSync'
+import { InstallPanel } from './InstallPanel'
 
 const PROJECT_DOCS_URL = 'https://github.com/adhiraj4ai/signoff'
 
@@ -65,7 +66,7 @@ export function StatusBar({
   const [syncStateData, setSyncStateData] = useState<SyncState | null>(null)
   const [author, setAuthor] = useState<{ name: string; email: string } | null>(null)
   const [open, setOpen] = useState<'identity' | 'vault' | 'settings' | null>(null)
-  const [connectMsg, setConnectMsg] = useState<string | null>(null)
+  const [showInstall, setShowInstall] = useState(false)
   const barRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -156,22 +157,14 @@ export function StatusBar({
             Switch project
           </button>
           <button
-            onClick={async () => {
-              try {
-                const { settingsPath } = await window.signoff.vault.connectClaude(vaultPath)
-                setConnectMsg(`Wrote ${settingsPath}`)
-              } catch (err) {
-                setConnectMsg(`Couldn't connect: ${err instanceof Error ? err.message : String(err)}`)
-              }
+            onClick={() => {
+              setOpen(null)
+              setShowInstall(true)
             }}
             className="mt-2 block text-iris hover:text-iris-ink hover:underline text-[12px] rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-iris/40"
           >
-            Connect to Claude Code
+            Set up Claude Code
           </button>
-          {connectMsg && <p className="mt-1.5 text-[11px] text-muted break-all">{connectMsg}</p>}
-          <p className="mt-1.5 text-[11px] text-faint">
-            Requires the SignOff npm packages (or use the Claude Code plugin).
-          </p>
         </Popover>
       )}
 
@@ -247,6 +240,20 @@ export function StatusBar({
           </div>
           <p className="text-[11px] text-faint mt-2">Currently: {autoLabel}</p>
         </Popover>
+      )}
+
+      {showInstall && (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-fg/40 p-4" onClick={() => setShowInstall(false)}>
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Set up Claude Code"
+            className="w-[420px] max-w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <InstallPanel vaultPath={vaultPath} onClose={() => setShowInstall(false)} />
+          </div>
+        </div>
       )}
     </footer>
   )
