@@ -242,8 +242,13 @@ export function DocumentPane({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [fullWidth, setFullWidth] = useState(false)
+  // Full width is the default reading layout; remembered across sessions.
+  const [fullWidth, setFullWidth] = useState(() => localStorage.getItem('signoff.fullWidth') !== 'false')
   const [marks, setMarks] = useState<QuoteMark[]>([])
+
+  useEffect(() => {
+    localStorage.setItem('signoff.fullWidth', String(fullWidth))
+  }, [fullWidth])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const readRef = useRef<HTMLDivElement>(null)
 

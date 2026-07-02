@@ -210,9 +210,8 @@ export function Sidebar({
         <button
           onClick={onSwitchVault}
           title="Switch project"
-          className="group flex items-center gap-2.5 min-w-0 px-1 py-1 rounded-md hover:bg-railfg/[0.08] transition-colors"
+          className="group flex items-center gap-2 min-w-0 px-1.5 py-1 rounded-md hover:bg-railfg/[0.08] transition-colors"
         >
-          <Logo size={24} className="shrink-0" />
           <span className="font-semibold text-[13px] text-railfg/95 truncate" title={vaultName}>
             {vaultName}
           </span>
@@ -428,9 +427,11 @@ export function Sidebar({
             </button>
           </div>
         )}
-        <p className="px-4 py-2.5 font-mono text-[10px] tracking-wide text-railfg/30">
-          Signoff · review &amp; approve
-        </p>
+        <div className="px-3.5 py-3 flex items-center gap-2 border-t border-railfg/[0.06]">
+          <Logo size={22} className="shrink-0" />
+          <span className="font-semibold text-[13.5px] tracking-tight text-railfg/90">SignOff</span>
+          <span className="ml-auto font-mono text-[10px] tracking-wide text-railfg/30">review &amp; approve</span>
+        </div>
       </footer>
     </aside>
   )
