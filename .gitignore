@@ -10,3 +10,4 @@ docs/superpowers/
 # SignOff project-local state (active-feature pointer)
 .signoff/
 apps/desktop/release/
+apps/desktop/resources/tools/
