@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -7,12 +8,14 @@ import { handlePublish } from "./tools/publish.js";
 import { handleSubmit } from "./tools/submit.js";
 import { handleCheck } from "./tools/check.js";
 import { handleList } from "./tools/list.js";
+import { recordMcpCall } from "./tools/audit-record.js";
 
 export function createServer(vaultPath: string): Server {
   const server = new Server(
     { name: "signoff", version: "0.1.0" },
     { capabilities: { tools: {} } }
   );
+  const sessionId = randomUUID(); // one id per server process = one Claude Code session
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
@@ -136,8 +139,10 @@ export function createServer(vaultPath: string): Server {
 
       if (name === "publish_document") {
         result = await handlePublish(vaultPath, args);
+        await recordMcpCall(vaultPath, sessionId, "publish_document", args);
       } else if (name === "submit_for_review") {
         result = await handleSubmit(vaultPath, args);
+        await recordMcpCall(vaultPath, sessionId, "submit_for_review", args);
       } else if (name === "check_approval") {
         result = await handleCheck(vaultPath, args);
       } else if (name === "list_pending") {
