@@ -19,14 +19,20 @@ export async function recordMcpCall(
       typeof (args as Record<string, unknown>).feature_name === "string"
         ? ((args as Record<string, unknown>).feature_name as string)
         : null;
-    const identity = await resolveGitIdentity(vaultPath);
+    // Resolve identity against the PROJECT repo, not the vault (.signoff) repo:
+    // the vault is its own git repo with no local user identity, so resolving
+    // there falls through to the global config, which can differ from the
+    // project-local identity the gate recorder uses. Resolving both against the
+    // project root keeps one person's gate rows and MCP rows under one actor.
+    const projectRoot = projectRootOf(vaultPath);
+    const identity = await resolveGitIdentity(projectRoot);
     const entry: AuditEntry = {
       v: 1,
       session_id: sessionId,
       ts: new Date().toISOString(),
       actor: identity?.email ?? "unknown",
       feature,
-      repo: path.basename(projectRootOf(vaultPath)),
+      repo: path.basename(projectRoot),
       source: "mcp",
       tool,
       decision: "allow",

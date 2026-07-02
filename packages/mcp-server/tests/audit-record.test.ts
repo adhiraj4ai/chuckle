@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { simpleGit } from "simple-git";
 import { VaultManager, readAuditEntries, appendAuditEntry } from "@signoff/vault-core";
 import { recordMcpCall } from "../src/tools/audit-record.js";
 
@@ -28,6 +29,22 @@ describe("recordMcpCall", () => {
       source: "mcp", decision: "allow", tool: "publish_document",
       feature: "user-auth", session_id: "srv-1", repo: "proj",
     });
+  });
+
+  it("resolves actor from the project repo identity, not the vault repo", async () => {
+    // The project root is a git repo with a LOCAL identity; the vault (.signoff)
+    // is a separate repo with no local identity. The recorder must read the
+    // project-local email so MCP rows match the gate recorder's actor.
+    const projectRoot = path.join(root, "proj");
+    const g = simpleGit(projectRoot);
+    await g.init();
+    await g.addConfig("user.email", "work@corp.example");
+    await g.addConfig("user.name", "Work Dev");
+
+    await recordMcpCall(vaultPath, "srv-1", "submit_for_review", { feature_name: "f" });
+    const rows = await readAuditEntries(vaultPath);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].actor).toBe("work@corp.example");
   });
 
   it("is fail-open: swallows a genuine append failure", async () => {
