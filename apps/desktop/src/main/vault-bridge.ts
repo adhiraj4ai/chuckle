@@ -49,6 +49,8 @@ import {
   cloneVault as coreCloneVault,
   classifyGitError,
   auditRelPaths,
+  readAuditEntries,
+  type AuditEntry,
   type VaultInfo,
   type VaultWorkflows,
   type WorkflowConfig,
@@ -171,6 +173,11 @@ export async function commitAuditLog(vaultPath: string): Promise<void> {
     files,
     message: 'chore(audit): sync session audit log',
   }))
+}
+
+/** Read-only view of the session audit log, optionally filtered to one feature. */
+export async function readAuditLog(vaultPath: string, feature?: string): Promise<AuditEntry[]> {
+  return readAuditEntries(vaultPath, feature ? { feature } : {})
 }
 
 async function resolveVaultAuthor(vaultPath: string): Promise<{ name: string; email: string }> {

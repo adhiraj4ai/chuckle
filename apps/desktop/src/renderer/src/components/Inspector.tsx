@@ -12,6 +12,7 @@ import { SignOffSeal } from './SignOffSeal'
 import { DetailsPanel } from './DetailsPanel'
 import { ReviewPanel } from './ReviewPanel'
 import { DiscussionRail } from './DiscussionRail.js'
+import { AuditPanel } from './AuditPanel.js'
 
 interface Props {
   vaultPath: string
@@ -59,7 +60,7 @@ export function Inspector({
   onManageCategories,
   onCommentsChanged,
 }: Props): React.ReactElement {
-  const [tab, setTab] = useState<'review' | 'discussion'>('review')
+  const [tab, setTab] = useState<'review' | 'discussion' | 'audit'>('review')
   const [openComments, setOpenComments] = useState(0)
 
   // A comment request from the document opens the Discussion tab.
@@ -127,6 +128,12 @@ export function Inspector({
               </span>
             )}
           </button>
+          <button className={tabBtn(tab === 'audit')} onClick={() => setTab('audit')} aria-pressed={tab === 'audit'}>
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 8v4l3 3M12 3a9 9 0 1 0 9 9" />
+            </svg>
+            Audit
+          </button>
         </div>
       </div>
 
@@ -140,6 +147,8 @@ export function Inspector({
             openRequest={commentRequest ?? null}
             onCommentsChanged={onCommentsChanged}
           />
+        ) : tab === 'audit' ? (
+          <AuditPanel vaultPath={vaultPath} feature={feature.name} />
         ) : (
           <ReviewPanel
             vaultPath={vaultPath}

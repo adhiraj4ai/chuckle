@@ -53,6 +53,21 @@ export { CATEGORY_COLORS, slugify, normalizeTags } from '@signoff/vault-core/cat
 // to avoid pulling in the Node-only vault-core barrel into the renderer bundle).
 export const TIER_KEYS: Tier[] = ['light', 'standard', 'heavy']
 
+/** Mirrors vault-core's `AuditEntry`. Duplicated here (not imported from
+ *  vault-core) because the renderer bundle must not pull in vault-core's
+ *  Node-only barrel — see the CATEGORY_COLORS note above. */
+export interface AuditLogEntry {
+  v: 1
+  session_id: string | null
+  ts: string
+  actor: string
+  feature: string | null
+  repo: string
+  source: 'gate' | 'mcp'
+  tool: string
+  decision: 'allow' | 'block'
+}
+
 export interface InstallStatus {
   gate: 'not_installed' | 'installed' | 'outdated'
   skill: 'not_installed' | 'installed'
@@ -123,6 +138,7 @@ export type IpcChannels =
   | 'categories:list' | 'categories:upsert' | 'categories:remove'
   | 'feature:set-category' | 'feature:set-tags' | 'feature:set-tier' | 'feature:set-ticket'
   | 'document:read' | 'document:write' | 'document:get-approval' | 'document:is-stale' | 'document:get-status'
+  | 'audit:read'
   | 'review:action'
   | 'comments:read' | 'comments:add-thread' | 'comments:add-reply' | 'comments:set-resolved'
   | 'project:read-claude-md'
@@ -169,6 +185,9 @@ export interface SignoffAPI {
     getApproval(vaultPath: string, feature: string, type: DocumentType): Promise<ApprovalRecord | null>
     isStale(vaultPath: string, feature: string, type: DocumentType): Promise<boolean>
     getStatus(vaultPath: string, feature: string, type: DocumentType): Promise<CheckApprovalResult>
+  }
+  audit: {
+    read(vaultPath: string, feature?: string): Promise<AuditLogEntry[]>
   }
   review: {
     action(vaultPath: string, feature: string, type: DocumentType, action: ReviewAction, message?: string | null): Promise<ReviewResult>

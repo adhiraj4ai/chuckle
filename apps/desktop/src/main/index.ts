@@ -17,6 +17,7 @@ import {
   writeDocument,
   getDocumentApproval,
   getDocumentStatus,
+  readAuditLog,
   reviewAction,
   readDocComments,
   addCommentThread,
@@ -143,6 +144,7 @@ function registerIpcHandlers(): void {
   )
   ipcMain.handle('document:get-approval', (_e, { vaultPath, feature, type }) => getDocumentApproval(vaultPath, feature, type))
   ipcMain.handle('document:get-status', (_e, { vaultPath, feature, type }) => getDocumentStatus(vaultPath, feature, type))
+  ipcMain.handle('audit:read', (_e, { vaultPath, feature }) => readAuditLog(vaultPath, feature))
   ipcMain.handle('review:action', (_e, { vaultPath, feature, type, action, message }) => reviewAction(vaultPath, feature, type, action, message))
   ipcMain.handle('comments:read', (_e, { vaultPath, feature, type }) => readDocComments(vaultPath, feature, type))
   ipcMain.handle('comments:add-thread', (_e, { vaultPath, feature, type, section, line, body, quote }) => addCommentThread(vaultPath, feature, type, section, line, body, quote))

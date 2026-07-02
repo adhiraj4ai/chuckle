@@ -58,6 +58,9 @@ const mockSignoff: SignoffAPI = {
     isStale: vi.fn(),
     getStatus: vi.fn(),
   },
+  audit: {
+    read: vi.fn().mockResolvedValue([]),
+  },
   review: {
     action: vi.fn(),
   },
